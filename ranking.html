@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ranking — Seleção de Condutores CBMDF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    primary: "#000000", background: "#f9f9f9", secondary: "#5e5e5e", error: "#ba1a1a", success: "#1b5e20",
+    "surface-container-low": "#f3f3f4", "surface-container-highest": "#e2e2e2", "outline-variant": "#c6c6c6",
+    "on-surface-variant": "#474747"
+  },
+  borderRadius: { DEFAULT: "0px", lg: "0px", xl: "0px", full: "9999px" },
+  fontFamily: { sans: ["Public Sans", "sans-serif"] }
+}}};
+</script>
+<style>
+  body { font-family: 'Public Sans', sans-serif; background-color: #f9f9f9; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+</style>
+</head>
+<body class="bg-background text-primary min-h-screen pb-32">
+<header class="bg-black fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16">
+  <div class="flex items-center gap-3">
+    <span class="material-symbols-outlined text-white">military_tech</span>
+    <h1 class="text-white font-black uppercase tracking-tighter text-xl">Ranking — Condutores</h1>
+  </div>
+  <span class="text-white/60 text-[10px] font-bold uppercase tracking-widest" id="ranking-atualizado">--</span>
+</header>
+
+<main class="mt-20 px-4 md:px-6 max-w-5xl mx-auto space-y-8">
+  <!-- Classificação -->
+  <section class="overflow-x-auto border-2 border-black">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 font-black text-xs uppercase tracking-widest border-r border-white/20 text-center">POS</th>
+          <th class="p-3 font-black text-xs uppercase tracking-widest border-r border-white/20">CANDIDATO</th>
+          <th class="p-3 font-black text-xs uppercase tracking-widest border-r border-white/20 text-center hidden md:table-cell">MATRÍCULA</th>
+          <th class="p-3 font-black text-xs uppercase tracking-widest border-r border-white/20 text-center">TEMPO</th>
+          <th class="p-3 font-black text-xs uppercase tracking-widest border-r border-white/20 text-center">PEN</th>
+          <th class="p-3 font-black text-xs uppercase tracking-widest text-center">MF</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white" id="ranking-body">
+        <tr><td class="p-4 text-center font-bold text-sm text-zinc-500 uppercase" colspan="6">CARREGANDO…</td></tr>
+      </tbody>
+    </table>
+    <p class="p-3 text-[10px] font-bold uppercase text-secondary tracking-widest bg-surface-container-low" id="rodape-criterios">
+      Toque em uma linha para ver o memorial de cálculo.
+    </p>
+  </section>
+
+  <!-- Memorial de cálculo do selecionado -->
+  <section class="grid grid-cols-1 md:grid-cols-2 bg-white border-8 border-primary hidden" id="memorial-card">
+    <div class="p-8 border-b md:border-b-0 md:border-r border-primary space-y-4">
+      <h3 class="text-xl font-black uppercase tracking-tight" id="mem-nome">MEMORIAL DE CÁLCULO</h3>
+      <ul class="space-y-3">
+        <li class="flex justify-between font-bold text-lg"><span>PONTUAÇÃO TEMPO</span><span class="text-blue-600" id="mem-pont-tempo">--</span></li>
+        <li class="flex justify-between font-bold text-lg text-error"><span>PENALIDADES</span><span id="mem-penalties">-0</span></li>
+        <li class="flex justify-between font-bold text-lg"><span>TEMPO EXECUTADO</span><span id="mem-tempo">--:--</span></li>
+      </ul>
+      <div class="pt-4 border-t border-zinc-200 space-y-1" id="mem-detalhe"></div>
+      <p class="pt-2 text-[10px] font-bold uppercase tracking-widest text-secondary break-words" id="mem-formula"></p>
+    </div>
+    <div class="p-8 bg-primary text-white flex flex-col items-center justify-center text-center">
+      <p class="font-black text-sm tracking-[0.3em] mb-2">NOTA FINAL (MF)</p>
+      <div class="text-[5rem] leading-none font-black" id="mem-final">--</div>
+      <p class="mt-3 text-xs font-black uppercase tracking-widest" id="mem-status"></p>
+    </div>
+  </section>
+</main>
+
+<!-- Navegação -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 bg-black">
+  <a href="dashboard.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">dashboard</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">PAINEL</span>
+  </a>
+  <a href="ranking.html" class="flex flex-col items-center justify-center bg-zinc-800 text-white p-2 w-full h-full transition-colors">
+    <span class="material-symbols-outlined mb-1">emoji_events</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">RANKING</span>
+  </a>
+  <a href="participantes.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">groups</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">CANDIDATOS</span>
+  </a>
+  <a href="configuracoes.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">settings</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">CONFIG.</span>
+  </a>
+</nav>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script>
+(function () {
+  var CFG = window.APP_CONFIG;
+  var el = AppUtils.el;
+  var selecionado = null;
+  var rankingAtual = [];
+
+  var rotulos = { tempo: 'menor tempo', penalidades: 'menos penalidades' };
+
+  function render() {
+    var tbody = document.getElementById('ranking-body');
+    tbody.textContent = '';
+
+    document.getElementById('rodape-criterios').textContent =
+      'Desempate: ' + (CFG.CRITERIOS_DESEMPATE || []).map(function (c) { return rotulos[c] || c; }).join(' → ') +
+      '. Toque em uma linha para ver o memorial de cálculo.';
+
+    if (!rankingAtual.length) {
+      var tr = el('tr');
+      var td = el('td', 'p-4 text-center font-bold text-sm text-zinc-500 uppercase', 'NENHUM CANDIDATO CADASTRADO.');
+      td.colSpan = 6;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      document.getElementById('memorial-card').classList.add('hidden');
+      return;
+    }
+
+    var medalhas = ['bg-amber-400', 'bg-zinc-300', 'bg-amber-700'];
+
+    rankingAtual.forEach(function (r, idx) {
+      var elim = r.resultado.eliminado;
+      var tr = el('tr', 'border-b-2 border-black/10 cursor-pointer hover:bg-surface-container-highest transition-colors ' +
+        (idx % 2 === 0 ? 'bg-white' : 'bg-surface-container-low') +
+        (selecionado === r.id ? ' outline outline-2 outline-black' : '') +
+        (elim ? ' opacity-60' : ''));
+
+      var tdPos = el('td', 'p-3 text-center');
+      tdPos.appendChild(el('span', 'inline-block w-8 h-8 leading-8 font-black text-sm ' +
+        (!elim && idx < 3 ? medalhas[idx] + ' text-black' : ''), elim ? '—' : (idx + 1) + 'º'));
+      tr.appendChild(tdPos);
+
+      tr.appendChild(el('td', 'p-3 font-black text-sm uppercase', r.nome));
+      tr.appendChild(el('td', 'p-3 text-center font-bold text-xs uppercase text-secondary hidden md:table-cell', r.matricula || '—'));
+      tr.appendChild(el('td', 'p-3 text-center font-black text-sm', r.tempo || '--:--'));
+      tr.appendChild(el('td', 'p-3 text-center font-black text-sm ' + (r.resultado.pontosPen > 0 ? 'text-error' : ''), '-' + r.resultado.pontosPen));
+      tr.appendChild(el('td', 'p-3 text-center font-black text-lg ' + (elim ? 'text-error' : ''),
+        elim ? 'ELIM.' : (r.resultado.mf === null ? '--' : r.resultado.mf.toFixed(2))));
+
+      tr.addEventListener('click', function () {
+        selecionado = r.id;
+        render();
+        mostrarMemorial(r);
+      });
+      tbody.appendChild(tr);
+    });
+
+    if (selecionado) {
+      var sel = rankingAtual.find(function (r) { return r.id === selecionado; });
+      if (sel) mostrarMemorial(sel);
+    }
+  }
+
+  function mostrarMemorial(r) {
+    var card = document.getElementById('memorial-card');
+    card.classList.remove('hidden');
+    document.getElementById('mem-nome').textContent = 'MEMORIAL — ' + r.nome;
+    document.getElementById('mem-pont-tempo').textContent = r.resultado.pontuacaoTempo === null ? '--' : r.resultado.pontuacaoTempo;
+    document.getElementById('mem-penalties').textContent = '-' + r.resultado.pontosPen;
+    document.getElementById('mem-tempo').textContent = r.tempo || '--:--';
+    document.getElementById('mem-final').textContent = r.resultado.eliminado ? '0' : (r.resultado.mf === null ? '--' : r.resultado.mf.toFixed(2));
+    document.getElementById('mem-status').textContent = r.resultado.eliminado ? 'ELIMINADO' : 'CLASSIFICADO';
+    document.getElementById('mem-formula').textContent = r.resultado.memorial ? 'FÓRMULA: ' + r.resultado.memorial : '';
+
+    var det = document.getElementById('mem-detalhe');
+    det.textContent = '';
+    CFG.TABELA_PENALIDADES.forEach(function (p) {
+      var qtd = r.contagens[p.key] || 0;
+      if (qtd > 0) {
+        det.appendChild(el('p', 'text-xs font-bold uppercase text-secondary',
+          p.nome + ': ' + qtd + 'x' + (AppUtils.isEliminatoria(p) ? ' (ELIMINATÓRIA)' : ' (-' + qtd * Number(p.pontos) + ' pts)')));
+      }
+    });
+    if (r.resultado.eliminado) {
+      det.appendChild(el('p', 'text-xs font-black uppercase text-error', r.resultado.motivo));
+    }
+    if (!det.hasChildNodes()) {
+      det.appendChild(el('p', 'text-xs font-bold uppercase text-success', 'Percurso limpo — sem penalidades'));
+    }
+  }
+
+  AppUtils.iniciarPolling(function (data) {
+    document.getElementById('ranking-atualizado').textContent =
+      !data ? 'SEM FONTE DE DADOS' : 'ATUALIZADO ÀS ' + AppUtils.horaAgora();
+    if (!data) return;
+    rankingAtual = data.ranking;
+    render();
+  });
+})();
+</script>
+</body>
+</html>

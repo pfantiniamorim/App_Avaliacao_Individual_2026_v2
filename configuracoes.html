@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Configurações — Seleção de Condutores CBMDF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    primary: "#000000", background: "#f9f9f9", secondary: "#5e5e5e", error: "#ba1a1a", success: "#1b5e20",
+    "surface-container-low": "#f3f3f4", "surface-container-highest": "#e2e2e2"
+  },
+  borderRadius: { DEFAULT: "0px", lg: "0px", xl: "0px", full: "9999px" },
+  fontFamily: { sans: ["Public Sans", "sans-serif"] }
+}}};
+</script>
+<style>
+  body { font-family: 'Public Sans', sans-serif; background-color: #f9f9f9; min-height: max(884px, 100dvh); }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 700, 'GRAD' 0, 'opsz' 24; }
+</style>
+</head>
+<body class="bg-background text-primary">
+<!-- TopAppBar -->
+<header class="bg-black sticky top-0 z-50">
+  <div class="flex justify-between items-center w-full px-6 h-16">
+    <div class="flex items-center gap-4">
+      <a href="dashboard.html" class="inline-flex"><span class="material-symbols-outlined text-white cursor-pointer">arrow_back</span></a>
+      <h1 class="text-white font-bold uppercase tracking-tighter text-lg">configurações do edital</h1>
+    </div>
+    <button class="text-white" id="btn-sair" title="Sair da área do chefe">
+      <span class="material-symbols-outlined">logout</span>
+    </button>
+  </div>
+</header>
+
+<main class="min-h-screen pb-32 pt-8">
+<div class="px-6 space-y-10 max-w-3xl mx-auto">
+
+  <!-- FÓRMULA -->
+  <section>
+    <h3 class="text-primary font-black text-2xl tracking-tighter uppercase border-b-4 border-black inline-block pr-4 mb-4">FÓRMULA DA NOTA (MF)</h3>
+    <div class="bg-surface-container-low p-6 border-l-8 border-primary space-y-4">
+      <div>
+        <label class="block text-[10px] font-black uppercase tracking-widest mb-2" for="input-formula">Fórmula em vigor (somente leitura aqui)</label>
+        <input class="w-full h-14 bg-white border-b-2 border-black text-base font-bold px-4 focus:ring-0 focus:outline-none font-mono" id="input-formula" readonly type="text"/>
+        <p class="mt-2 text-[10px] font-bold text-secondary uppercase tracking-widest">Variáveis: PONTUACAO_TEMPO • PENALIDADES</p>
+        <p class="mt-1 text-[10px] font-bold text-error uppercase tracking-widest">Para alterar, edite FORMULA_NOTA em js/config.js e publique novamente.</p>
+      </div>
+      <div class="grid grid-cols-1 gap-3">
+        <button class="border-2 border-black font-black uppercase text-xs py-4 tracking-widest hover:bg-black hover:text-white transition-colors" id="btn-testar-formula">TESTAR ESTA FÓRMULA COM VALORES DE EXEMPLO</button>
+      </div>
+      <p class="text-[10px] font-bold uppercase tracking-widest" id="formula-feedback"></p>
+
+      <!-- Teste -->
+      <div class="hidden bg-white border-2 border-black p-4 space-y-3" id="painel-teste">
+        <p class="text-[10px] font-black uppercase tracking-widest">Simulação</p>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-[9px] font-bold uppercase text-secondary block mb-1">PONTUACAO_TEMPO</span>
+            <input class="w-full h-12 bg-surface-container-low border-b-2 border-black font-black px-3 focus:ring-0 focus:outline-none" id="teste-pt" type="number" value="80"/>
+          </label>
+          <label class="block">
+            <span class="text-[9px] font-bold uppercase text-secondary block mb-1">PENALIDADES</span>
+            <input class="w-full h-12 bg-surface-container-low border-b-2 border-black font-black px-3 focus:ring-0 focus:outline-none" id="teste-pen" type="number" value="13"/>
+          </label>
+        </div>
+        <p class="font-black text-lg" id="teste-resultado">—</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- REGRAS EM VIGOR -->
+  <section>
+    <h3 class="text-primary font-black text-2xl tracking-tighter uppercase border-b-4 border-black inline-block pr-4 mb-4">REGRAS EM VIGOR</h3>
+    <div class="space-y-3" id="painel-regras"></div>
+    <p class="mt-3 text-[10px] font-bold text-secondary uppercase tracking-widest leading-relaxed">
+      Para alterar tabelas, tempo máximo, exercícios, desempate ou consolidação: edite
+      <span class="font-black">js/config.js</span> (ou a aba CONFIG da planilha, que sobrepõe o arquivo sem novo deploy).
+      Nenhuma regra fica no código da lógica.
+    </p>
+  </section>
+
+  <!-- INTEGRAÇÃO -->
+  <section>
+    <h3 class="text-primary font-black text-2xl tracking-tighter uppercase border-b-4 border-black inline-block pr-4 mb-4">INTEGRAÇÃO</h3>
+    <div class="space-y-2" id="painel-integracao"></div>
+    <p class="mt-3 text-[10px] font-bold text-secondary uppercase tracking-widest">Passo a passo completo em CONFIGURAR_PLANILHA.md</p>
+  </section>
+
+</div>
+</main>
+
+<!-- Navegação -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 bg-black">
+  <a href="dashboard.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">dashboard</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">PAINEL</span>
+  </a>
+  <a href="ranking.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">emoji_events</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">RANKING</span>
+  </a>
+  <a href="participantes.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">groups</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">CANDIDATOS</span>
+  </a>
+  <a href="configuracoes.html" class="flex flex-col items-center justify-center bg-zinc-800 text-white p-2 w-full h-full transition-colors">
+    <span class="material-symbols-outlined mb-1">settings</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">CONFIG.</span>
+  </a>
+</nav>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script>
+(function () {
+  var CFG = window.APP_CONFIG;
+  var el = AppUtils.el;
+  var inputFormula = document.getElementById('input-formula');
+
+  document.getElementById('btn-sair').addEventListener('click', AppUtils.sairChefe);
+
+  function bloco(titulo, valor) {
+    var box = el('div', 'bg-white border-2 border-black p-4');
+    box.appendChild(el('p', 'text-[9px] font-black uppercase tracking-widest text-secondary mb-1', titulo));
+    box.appendChild(el('p', 'font-bold text-sm break-words', valor));
+    return box;
+  }
+
+  function renderPaineis() {
+    inputFormula.value = CFG.FORMULA_NOTA;
+
+    var regras = document.getElementById('painel-regras');
+    regras.textContent = '';
+    regras.appendChild(bloco('TEMPO MÁXIMO (ELIMINAÇÃO)', CFG.TEMPO_MAXIMO));
+    regras.appendChild(bloco('TABELA TEMPO → PONTUAÇÃO',
+      (CFG.TABELA_TEMPO || []).map(function (f) { return 'até ' + f.ate + ' = ' + f.pontos; }).join('  •  ')));
+    regras.appendChild(bloco('TABELA DE PENALIDADES',
+      (CFG.TABELA_PENALIDADES || []).map(function (p) {
+        return p.nome + ' = ' + (AppUtils.isEliminatoria(p) ? 'ELIMINATÓRIO' : p.pontos);
+      }).join('  •  ')));
+    regras.appendChild(bloco('EXERCÍCIOS DO PERCURSO', (CFG.EXERCICIOS || []).join('  •  ')));
+    regras.appendChild(bloco('CRITÉRIOS DE DESEMPATE', (CFG.CRITERIOS_DESEMPATE || []).join(' → ')));
+
+    var integ = document.getElementById('painel-integracao');
+    integ.textContent = '';
+    integ.appendChild(bloco('ENDPOINT APPS SCRIPT (escrita)', CFG.ENDPOINT_APPS_SCRIPT || '⚠ NÃO CONFIGURADO'));
+    integ.appendChild(bloco('CSV CANDIDATOS (leitura)', CFG.CSV_CANDIDATOS_URL || '⚠ NÃO CONFIGURADO'));
+    integ.appendChild(bloco('CSV REGISTROS (leitura)', CFG.CSV_REGISTROS_URL || '⚠ NÃO CONFIGURADO'));
+    integ.appendChild(bloco('CSV RESULTADOS (leitura)', CFG.CSV_RESULTADOS_URL || '⚠ NÃO CONFIGURADO'));
+    integ.appendChild(bloco('POLLING', (CFG.POLLING_MS / 1000) + ' segundos'));
+  }
+
+  document.getElementById('btn-testar-formula').addEventListener('click', function () {
+    document.getElementById('painel-teste').classList.remove('hidden');
+    testar();
+  });
+
+  function testar() {
+    var pt = parseFloat(document.getElementById('teste-pt').value) || 0;
+    var pen = parseFloat(document.getElementById('teste-pen').value) || 0;
+    var out = document.getElementById('teste-resultado');
+    try {
+      var vars = { PONTUACAO_TEMPO: pt, PENALIDADES: pen };
+      var r = AppUtils.avaliarFormula(inputFormula.value, vars);
+      out.textContent = AppUtils.formulaSubstituida(inputFormula.value, vars) + ' = ' + (Math.round(r * 100) / 100).toFixed(2);
+      out.className = 'font-black text-lg';
+    } catch (e) {
+      out.textContent = 'ERRO: ' + e.message;
+      out.className = 'font-black text-lg text-error';
+    }
+  }
+  document.getElementById('teste-pt').addEventListener('input', testar);
+  document.getElementById('teste-pen').addEventListener('input', testar);
+
+  async function init() {
+    await AppUtils.pedirPin();
+    renderPaineis();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

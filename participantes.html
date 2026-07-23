@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cadastro de Candidatos — Seleção de Condutores CBMDF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    primary: "#000000", background: "#f9f9f9", secondary: "#5e5e5e", error: "#ba1a1a", success: "#1b5e20",
+    "surface-container-low": "#f3f3f4", "surface-container-highest": "#e2e2e2"
+  },
+  borderRadius: { DEFAULT: "0px", lg: "0px", xl: "0px", full: "9999px" },
+  fontFamily: { sans: ["Public Sans", "sans-serif"] }
+}}};
+</script>
+<style>
+  body { font-family: 'Public Sans', sans-serif; background-color: #f9f9f9; min-height: max(884px, 100dvh); }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+</style>
+</head>
+<body class="bg-background text-primary">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 h-16 bg-black text-white flex items-center px-4 justify-between">
+  <div class="flex items-center gap-4">
+    <a href="dashboard.html" class="hover:bg-neutral-900 p-2 inline-flex">
+      <span class="material-symbols-outlined text-white">arrow_back</span>
+    </a>
+    <h1 class="font-bold uppercase tracking-tighter text-white">CADASTRO DE CANDIDATOS</h1>
+  </div>
+  <button class="text-white" id="btn-sair" title="Sair da área do chefe">
+    <span class="material-symbols-outlined">logout</span>
+  </button>
+</header>
+
+<main class="pt-24 pb-32 px-4 max-w-4xl mx-auto min-h-screen">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-widest text-error mb-1">USO EXCLUSIVO DO CHEFE DA AVALIAÇÃO</p>
+      <h2 class="text-4xl md:text-6xl font-black uppercase leading-none tracking-tighter">CORPO DE<br/>CANDIDATOS</h2>
+      <p class="text-secondary font-bold mt-2 uppercase text-xs tracking-widest">Lista compartilhada — origem do dropdown dos avaliadores</p>
+    </div>
+    <div class="bg-black text-white p-6 flex flex-col justify-between min-w-[150px]">
+      <span class="text-[10px] font-bold tracking-widest uppercase">Cadastrados</span>
+      <span class="text-5xl font-black leading-none mt-4" id="total-ok">--</span>
+    </div>
+  </div>
+
+  <!-- Adicionar candidato -->
+  <section class="mb-10 bg-surface-container-low p-6 border-l-8 border-black">
+    <h3 class="text-sm font-black uppercase tracking-widest mb-4">ADICIONAR CANDIDATO</h3>
+    <form class="grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-3" id="form-adicionar">
+      <input class="h-14 bg-white border-b-2 border-black text-lg font-bold px-4 focus:ring-0 focus:outline-none uppercase" id="novo-nome" placeholder="NOME DE GUERRA" required type="text"/>
+      <input class="h-14 bg-white border-b-2 border-black text-lg font-bold px-4 focus:ring-0 focus:outline-none" id="novo-matricula" inputmode="numeric" placeholder="MATRÍCULA" required type="text"/>
+      <button class="h-14 bg-black text-white font-black uppercase tracking-widest px-8 hover:bg-zinc-800 active:scale-[0.98] transition-all" type="submit">ADICIONAR</button>
+    </form>
+  </section>
+
+  <!-- Lista -->
+  <section class="overflow-x-auto border-2 border-black">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 font-black text-xs uppercase tracking-widest border-r border-white/20">NOME DE GUERRA</th>
+          <th class="p-3 font-black text-xs uppercase tracking-widest border-r border-white/20">MATRÍCULA</th>
+          <th class="p-3 font-black text-xs uppercase tracking-widest border-r border-white/20 text-center">STATUS</th>
+          <th class="p-3 font-black text-xs uppercase tracking-widest text-center">AÇÃO</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white" id="lista-body">
+        <tr><td class="p-4 text-center font-bold text-sm text-zinc-500 uppercase" colspan="4">CARREGANDO…</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<!-- Navegação (administrativa) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 bg-black">
+  <a href="dashboard.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">dashboard</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">PAINEL</span>
+  </a>
+  <a href="ranking.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">emoji_events</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">RANKING</span>
+  </a>
+  <a href="participantes.html" class="flex flex-col items-center justify-center bg-zinc-800 text-white p-2 w-full h-full transition-colors">
+    <span class="material-symbols-outlined mb-1">groups</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">CANDIDATOS</span>
+  </a>
+  <a href="configuracoes.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">settings</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">CONFIG.</span>
+  </a>
+</nav>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script>
+(function () {
+  var el = AppUtils.el;
+  var candidatosAtuais = {};
+  var renderPendente = false;
+
+  document.getElementById('btn-sair').addEventListener('click', AppUtils.sairChefe);
+
+  function algumCampoEmFoco() {
+    var a = document.activeElement;
+    return a && (a.classList.contains('campo-cand') || a.id === 'novo-nome' || a.id === 'novo-matricula');
+  }
+
+  function render() {
+    if (algumCampoEmFoco()) { renderPendente = true; return; }
+    renderPendente = false;
+
+    var tbody = document.getElementById('lista-body');
+    tbody.textContent = '';
+    var entradas = Object.values(candidatosAtuais)
+      .sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
+
+    document.getElementById('total-ok').textContent =
+      String(entradas.filter(function (c) { return c.ativo !== false; }).length).padStart(2, '0');
+
+    if (!entradas.length) {
+      var tr = el('tr');
+      var td = el('td', 'p-4 text-center font-bold text-sm text-zinc-500 uppercase', 'NENHUM CANDIDATO CADASTRADO.');
+      td.colSpan = 4; tr.appendChild(td); tbody.appendChild(tr);
+      return;
+    }
+
+    entradas.forEach(function (c, idx) {
+      var ativo = c.ativo !== false;
+      var tr = el('tr', 'border-b-2 border-black/10 ' + (idx % 2 === 0 ? 'bg-white' : 'bg-surface-container-low') + (ativo ? '' : ' opacity-50'));
+
+      // Nome de guerra (editável)
+      var tdNome = el('td', 'p-3');
+      var inpNome = document.createElement('input');
+      inpNome.type = 'text'; inpNome.value = c.nome || '';
+      inpNome.className = 'campo-cand bg-transparent border-none p-0 text-sm font-black uppercase tracking-tight focus:ring-0 w-full';
+      inpNome.addEventListener('blur', function (e) {
+        var nome = e.target.value.trim().toUpperCase();
+        if (nome && nome !== c.nome) salvar({ id: c.id, nome: nome, matricula: c.matricula, ativo: c.ativo });
+        else e.target.value = c.nome || '';
+        if (renderPendente) render();
+      });
+      inpNome.addEventListener('keypress', function (e) { if (e.key === 'Enter') e.target.blur(); });
+      tdNome.appendChild(inpNome); tr.appendChild(tdNome);
+
+      // Matrícula (editável)
+      var tdMat = el('td', 'p-3');
+      var inpMat = document.createElement('input');
+      inpMat.type = 'text'; inpMat.value = c.matricula || '';
+      inpMat.className = 'campo-cand bg-transparent border-none p-0 text-sm font-bold focus:ring-0 w-full';
+      inpMat.addEventListener('blur', function (e) {
+        var mat = e.target.value.trim();
+        if (mat !== (c.matricula || '')) salvar({ id: c.id, nome: c.nome, matricula: mat, ativo: c.ativo });
+        if (renderPendente) render();
+      });
+      inpMat.addEventListener('keypress', function (e) { if (e.key === 'Enter') e.target.blur(); });
+      tdMat.appendChild(inpMat); tr.appendChild(tdMat);
+
+      // Status (OK / INATIVO — clicável)
+      var tdStatus = el('td', 'p-3 text-center');
+      var btnStatus = el('button', 'px-4 py-1 text-[11px] font-black uppercase tracking-widest ' + (ativo ? 'bg-success text-white' : 'bg-zinc-300 text-zinc-700'), ativo ? 'OK' : 'INATIVO');
+      btnStatus.title = 'Clique para alternar';
+      btnStatus.addEventListener('click', function () {
+        salvar({ id: c.id, nome: c.nome, matricula: c.matricula, ativo: !ativo });
+      });
+      tdStatus.appendChild(btnStatus); tr.appendChild(tdStatus);
+
+      // Excluir
+      var tdAcao = el('td', 'p-3 text-center');
+      var btnDel = el('button', 'font-bold text-xs uppercase underline tracking-tighter hover:text-error', 'Excluir');
+      btnDel.addEventListener('click', async function () {
+        if (!confirm('Excluir "' + c.nome + '" da lista? (As penalidades já registradas dele permanecem na aba REGISTROS para auditoria.)')) return;
+        try {
+          delete candidatosAtuais[c.id];
+          render();
+          await AppUtils.removerCandidato(c.id);
+        } catch (e) { alert('Falha ao excluir: ' + e.message); }
+      });
+      tdAcao.appendChild(btnDel); tr.appendChild(tdAcao);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function salvar(cand) {
+    candidatosAtuais[cand.id] = {
+      id: cand.id, nome: cand.nome, matricula: cand.matricula, ativo: cand.ativo !== false
+    };
+    render();
+    try { await AppUtils.salvarCandidato(cand); }
+    catch (e) { alert('Falha ao salvar (verifique a conexão): ' + e.message); }
+  }
+
+  document.getElementById('form-adicionar').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var nome = document.getElementById('novo-nome').value.trim().toUpperCase();
+    var matricula = document.getElementById('novo-matricula').value.trim();
+    if (!nome || !matricula) return;
+
+    var dup = Object.values(candidatosAtuais).some(function (c) { return (c.matricula || '') === matricula; });
+    if (dup && !confirm('Já existe um candidato com a matrícula ' + matricula + '. Adicionar mesmo assim?')) return;
+
+    await salvar({ id: AppUtils.idCurto(), nome: nome, matricula: matricula, ativo: true });
+    document.getElementById('novo-nome').value = '';
+    document.getElementById('novo-matricula').value = '';
+    document.getElementById('novo-nome').focus();
+  });
+
+  async function init() {
+    await AppUtils.pedirPin();
+    AppUtils.iniciarPolling(function (data) {
+      if (!data) return;
+      candidatosAtuais = data.candidatos || {};
+      render();
+    });
+  }
+  init();
+})();
+</script>
+</body>
+</html>

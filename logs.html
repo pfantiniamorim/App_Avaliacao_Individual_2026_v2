@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Logs — Seleção de Condutores CBMDF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    primary: "#000000", background: "#f9f9f9", secondary: "#5e5e5e", error: "#ba1a1a",
+    "surface-container-low": "#f3f3f4", "surface-container-highest": "#e2e2e2", "on-surface-variant": "#474747"
+  },
+  borderRadius: { DEFAULT: "0px", lg: "0px", xl: "0px", full: "9999px" },
+  fontFamily: { sans: ["Public Sans", "sans-serif"] }
+}}};
+</script>
+<style>
+  body { font-family: 'Public Sans', sans-serif; background-color: #f9f9f9; min-height: max(884px, 100dvh); }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+</style>
+</head>
+<body class="bg-background text-primary">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full h-16 z-50 bg-black text-white flex justify-between items-center px-6">
+  <div class="flex items-center gap-4">
+    <span class="material-symbols-outlined text-white">shield</span>
+    <h1 class="font-black text-xl uppercase tracking-tighter text-white">GBMOT - CBMDF</h1>
+  </div>
+</header>
+
+<main class="pt-24 pb-32 px-6 max-w-4xl mx-auto">
+  <div class="mb-8 border-l-8 border-black pl-4">
+    <h2 class="font-black text-3xl uppercase tracking-tight text-primary">HISTÓRICO DE PENALIDADES</h2>
+    <p class="font-bold text-sm text-secondary uppercase tracking-widest mt-1">SELEÇÃO DE CONDUTORES — REGISTRO AUDITÁVEL</p>
+    <p class="font-bold text-[10px] text-secondary uppercase tracking-widest mt-2">Cada linha é uma marcação individual: avaliador, candidato, infração e horário.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+    <div class="bg-black text-white p-6 flex flex-col justify-between">
+      <span class="font-bold text-xs uppercase opacity-70">Total de Penalidades</span>
+      <span class="font-black text-4xl mt-2" id="total-lancamentos">0</span>
+    </div>
+    <div class="bg-surface-container-highest p-6 flex flex-col justify-between">
+      <span class="font-bold text-xs uppercase text-on-surface-variant">Último Candidato</span>
+      <span class="font-black text-2xl mt-2 text-primary" id="last-candidato">--</span>
+    </div>
+    <div class="bg-surface-container-highest p-6 flex flex-col justify-between">
+      <span class="font-bold text-xs uppercase text-on-surface-variant">Sincronização</span>
+      <span class="font-black text-xl mt-2 text-primary" id="sync-hora">--</span>
+    </div>
+  </div>
+
+  <section class="overflow-x-auto border-2 border-black">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-4 font-black text-xs uppercase tracking-widest border-r border-white/20">DATA/HORA</th>
+          <th class="p-4 font-black text-xs uppercase tracking-widest border-r border-white/20">CANDIDATO</th>
+          <th class="p-4 font-black text-xs uppercase tracking-widest border-r border-white/20">AVALIADOR</th>
+          <th class="p-4 font-black text-xs uppercase tracking-widest border-r border-white/20">INFRAÇÃO</th>
+          <th class="p-4 font-black text-xs uppercase tracking-widest text-center">PONTOS</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white" id="log-table-body"></tbody>
+    </table>
+    <p class="p-3 text-[10px] font-bold uppercase text-secondary tracking-widest bg-surface-container-low">
+      Para consultar a nota final (MF) de um candidato, veja RANKING — ela é a soma de todas as marcações dele.
+    </p>
+  </section>
+</main>
+
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-20 px-4 bg-black z-50">
+  <a href="index.html" class="flex flex-col items-center justify-center text-zinc-500 hover:text-white w-full h-full transition-all">
+    <span class="material-symbols-outlined text-2xl">home</span>
+    <span class="font-bold text-[10px] uppercase mt-1">INICIAL</span>
+  </a>
+  <a href="avaliacao.html" class="flex flex-col items-center justify-center text-zinc-500 hover:text-white w-full h-full transition-all">
+    <span class="material-symbols-outlined text-2xl">gavel</span>
+    <span class="font-bold text-[10px] uppercase mt-1">AVALIAÇÃO</span>
+  </a>
+  <a href="logs.html" class="flex flex-col items-center justify-center text-white w-full h-full transition-all">
+    <span class="material-symbols-outlined text-2xl">history</span>
+    <span class="font-bold text-[10px] uppercase mt-1">LOGS</span>
+  </a>
+</nav>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script>
+(function () {
+  var el = AppUtils.el;
+
+  AppUtils.iniciarPolling(function (data) {
+    var tbody = document.getElementById('log-table-body');
+    tbody.textContent = '';
+    document.getElementById('sync-hora').textContent = !data ? '--' : AppUtils.horaAgora();
+
+    if (!data || !data.registros.length) {
+      document.getElementById('total-lancamentos').textContent = '0';
+      document.getElementById('last-candidato').textContent = '--';
+      var tr = el('tr');
+      var td = el('td', 'p-4 text-center font-bold text-sm text-zinc-500 uppercase',
+        !data ? 'CONFIGURE A FONTE DE DADOS (js/config.js).' : 'NENHUM REGISTRO LOCALIZADO.');
+      td.colSpan = 5;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    var ordenados = data.registros.slice().sort(function (a, b) { return (b.ts || '').localeCompare(a.ts || ''); });
+    document.getElementById('total-lancamentos').textContent = ordenados.length;
+    document.getElementById('last-candidato').textContent = ordenados[0].candidato;
+
+    ordenados.forEach(function (r, index) {
+      var tr = el('tr', index % 2 === 0
+        ? 'border-b-2 border-black/10 bg-white'
+        : 'bg-surface-container-low border-b-2 border-black/10');
+
+      tr.appendChild(el('td', 'p-4 font-bold text-xs text-secondary border-r border-black/10', r.dataHora || '--'));
+      tr.appendChild(el('td', 'p-4 font-black text-sm text-primary border-r border-black/10 uppercase', r.candidato));
+      tr.appendChild(el('td', 'p-4 font-bold text-xs text-secondary border-r border-black/10 uppercase', r.avaliador || '--'));
+      tr.appendChild(el('td', 'p-4 font-bold text-sm text-primary border-r border-black/10 uppercase', r.tipoPenalidade || '--'));
+
+      var pontosTexto = '--';
+      var pDef = window.APP_CONFIG.TABELA_PENALIDADES.find(function (p) { return p.nome === r.tipoPenalidade; });
+      if (pDef) pontosTexto = AppUtils.isEliminatoria(pDef) ? 'ELIM.' : ('-' + pDef.pontos);
+      tr.appendChild(el('td', 'p-4 font-black text-sm text-center ' + (pontosTexto === 'ELIM.' ? 'text-error' : 'text-primary'), pontosTexto));
+
+      tbody.appendChild(tr);
+    });
+  });
+})();
+</script>
+</body>
+</html>

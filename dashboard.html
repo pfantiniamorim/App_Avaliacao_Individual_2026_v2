@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dashboard — Seleção de Condutores CBMDF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: { primary: "#ffffff", "background-dark": "#000000" },
+  fontFamily: { sans: ["Public Sans", "sans-serif"] },
+  borderRadius: { DEFAULT: "0.125rem" }
+}}};
+</script>
+<style>
+  body { font-family: 'Public Sans', sans-serif; background-color: #000000; }
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+</style>
+</head>
+<body class="bg-background-dark text-white min-h-screen flex flex-col items-center p-4">
+<div class="w-full max-w-md md:max-w-6xl lg:max-w-7xl bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col h-[813px] md:h-[90vh]">
+  <!-- Header -->
+  <div class="px-6 pt-8 pb-4 flex justify-between items-center bg-zinc-900 border-b border-zinc-800">
+    <div>
+      <h1 class="text-[10px] font-black tracking-[0.2em] uppercase text-zinc-500">Dashboard — Chefe da Avaliação</h1>
+      <p class="text-xl font-black tracking-tighter text-white">SELEÇÃO DE CONDUTORES</p>
+    </div>
+    <div class="text-right flex items-start gap-3">
+      <div>
+        <span class="text-[10px] font-bold tracking-widest text-zinc-400 uppercase block" id="current-date">--</span>
+        <span class="text-xs font-black text-green-500" id="live-indicator">SINCRONIZANDO…</span>
+      </div>
+      <button class="text-zinc-500 hover:text-white" id="btn-sair" title="Sair da área do chefe">
+        <span class="material-symbols-outlined">logout</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Conteúdo -->
+  <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 pb-24">
+    <!-- Estatísticas -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white text-black p-5 rounded">
+        <p class="text-[9px] font-black uppercase tracking-widest text-zinc-500">Penalidades Marcadas</p>
+        <p class="text-4xl font-black tracking-tighter" id="stat-lancamentos">0</p>
+      </div>
+      <div class="bg-white text-black p-5 rounded">
+        <p class="text-[9px] font-black uppercase tracking-widest text-zinc-500">Candidatos</p>
+        <p class="text-4xl font-black tracking-tighter" id="stat-candidatos">0</p>
+      </div>
+      <div class="bg-white text-black p-5 rounded">
+        <p class="text-[9px] font-black uppercase tracking-widest text-zinc-500">Eliminados</p>
+        <p class="text-4xl font-black tracking-tighter text-red-600" id="stat-eliminados">0</p>
+      </div>
+      <div class="bg-zinc-950 border border-zinc-800 text-white p-5 rounded">
+        <p class="text-[9px] font-black uppercase tracking-widest text-zinc-500">Última Marcação</p>
+        <p class="text-lg font-black tracking-tighter leading-tight" id="stat-ultimo">--</p>
+        <p class="text-[9px] font-bold text-zinc-500" id="stat-ultimo-hora"></p>
+      </div>
+    </section>
+
+    <!-- Pódio parcial -->
+    <section>
+      <h2 class="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Classificação Parcial (Top 3)</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="podio">
+        <p class="text-zinc-500 text-sm font-bold uppercase">Aguardando lançamentos…</p>
+      </div>
+    </section>
+
+    <!-- Tempo de prova por candidato -->
+    <section>
+      <h2 class="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Tempo de Prova por Candidato</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="tempos-container">
+        <p class="text-zinc-500 text-sm font-bold uppercase">Nenhum candidato cadastrado.</p>
+      </div>
+    </section>
+
+    <!-- Feed de auditoria: cada penalidade marcada, em tempo real -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Log de Auditoria (cada marcação)</h2>
+        <span class="text-[8px] font-bold text-zinc-600">ATUALIZAÇÃO AUTOMÁTICA</span>
+      </div>
+      <div class="bg-zinc-950 border border-zinc-800 rounded-xl p-2 max-h-48 overflow-y-auto custom-scrollbar">
+        <div class="space-y-1" id="feed-content">
+          <div class="p-2"><p class="text-[10px] font-medium text-zinc-500">SISTEMA — Aguardando registros…</p></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="pt-4 border-t border-zinc-800">
+      <button onclick="window.location.href='ranking.html'" class="w-full text-black bg-white font-black uppercase text-xs py-3 rounded-lg transition-colors shadow-lg active:scale-[0.98] hover:bg-zinc-200 cursor-pointer">VER RANKING COMPLETO E MEMORIAL DE CÁLCULO</button>
+    </div>
+  </div>
+</div>
+
+<!-- Navegação -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 bg-black">
+  <a href="dashboard.html" class="flex flex-col items-center justify-center bg-zinc-800 text-white p-2 w-full h-full transition-colors">
+    <span class="material-symbols-outlined mb-1">dashboard</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">PAINEL</span>
+  </a>
+  <a href="ranking.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">emoji_events</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">RANKING</span>
+  </a>
+  <a href="participantes.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">groups</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">CANDIDATOS</span>
+  </a>
+  <a href="configuracoes.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">settings</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">CONFIG.</span>
+  </a>
+</nav>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script>
+(function () {
+  var el = AppUtils.el;
+  document.getElementById('current-date').textContent = AppUtils.fmtHoje();
+  document.getElementById('btn-sair').addEventListener('click', AppUtils.sairChefe);
+
+  var medalhas = ['bg-amber-400 text-black', 'bg-zinc-300 text-black', 'bg-amber-700 text-white'];
+  var ultimosTempos = {}; // candidatoId -> tempo salvo (evita sobrescrever campo em edição)
+
+  function algumTempoEmFoco() {
+    return document.activeElement && document.activeElement.classList.contains('time-input');
+  }
+
+  async function init() {
+    await AppUtils.pedirPin();
+
+    AppUtils.iniciarPolling(function (data) {
+      var live = document.getElementById('live-indicator');
+      if (!data) {
+        live.textContent = 'SEM FONTE DE DADOS';
+        live.className = 'text-xs font-black text-red-500';
+        return;
+      }
+      live.textContent = 'ATUALIZADO ÀS ' + AppUtils.horaAgora();
+      live.className = 'text-xs font-black text-green-500';
+
+      // Estatísticas
+      document.getElementById('stat-lancamentos').textContent = data.registros.length;
+      document.getElementById('stat-candidatos').textContent = data.ranking.length;
+      document.getElementById('stat-eliminados').textContent =
+        data.ranking.filter(function (r) { return r.resultado.eliminado; }).length;
+
+      var maisRecente = data.registros.slice().sort(function (a, b) { return (b.ts || '').localeCompare(a.ts || ''); })[0];
+      document.getElementById('stat-ultimo').textContent = maisRecente ? (maisRecente.candidato + ' — ' + maisRecente.tipoPenalidade) : '--';
+      document.getElementById('stat-ultimo-hora').textContent = maisRecente ? maisRecente.dataHora : '';
+
+      // Pódio (só classificados)
+      var podio = document.getElementById('podio');
+      podio.textContent = '';
+      var top3 = data.ranking.filter(function (r) { return !r.resultado.eliminado && r.resultado.mf !== null; }).slice(0, 3);
+      if (!top3.length) {
+        podio.appendChild(el('p', 'text-zinc-500 text-sm font-bold uppercase', 'Aguardando lançamentos…'));
+      }
+      top3.forEach(function (r, i) {
+        var card = el('div', 'bg-white text-black p-4 rounded flex items-center gap-3');
+        card.appendChild(el('span', 'w-10 h-10 flex items-center justify-center font-black text-lg ' + medalhas[i], (i + 1) + 'º'));
+        var info = el('div');
+        info.appendChild(el('p', 'font-black uppercase text-sm leading-tight', r.nome));
+        info.appendChild(el('p', 'text-[10px] font-bold text-zinc-500 uppercase',
+          'MF ' + r.resultado.mf.toFixed(2) + ' • ' + (r.tempo || '--:--') + (r.matricula ? ' • MAT. ' + r.matricula : '')));
+        card.appendChild(info);
+        podio.appendChild(card);
+      });
+
+      // Tempo de prova por candidato (edição pelo chefe)
+      if (!algumTempoEmFoco()) renderTempos(data.agregado);
+
+      // Feed de auditoria: cada penalidade individual
+      var feed = document.getElementById('feed-content');
+      feed.textContent = '';
+      data.registros.slice().sort(function (a, b) { return (b.ts || '').localeCompare(a.ts || ''); }).slice(0, 30).forEach(function (r) {
+        var linha = el('div', 'p-2 border-b border-zinc-900 last:border-0');
+        var p = el('p', 'text-[10px] font-medium text-zinc-300');
+        p.appendChild(el('span', 'text-zinc-500', (r.dataHora || '--') + ' '));
+        p.appendChild(document.createTextNode(
+          (r.avaliador || '?') + ' → ' + (r.tipoPenalidade || '?') + ' — ' + (r.candidato || '?')
+        ));
+        linha.appendChild(p);
+        feed.appendChild(linha);
+      });
+      if (!data.registros.length) {
+        feed.appendChild(el('div', 'p-2')).appendChild(
+          el('p', 'text-[10px] font-medium text-zinc-500', 'SISTEMA — Nenhuma penalidade registrada ainda.'));
+      }
+    });
+  }
+
+  function renderTempos(agregado) {
+    var container = document.getElementById('tempos-container');
+    container.textContent = '';
+    var ativos = agregado.filter(function (c) { return c.ativo !== false && c.nome; })
+      .sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+
+    if (!ativos.length) {
+      container.appendChild(el('p', 'text-zinc-500 text-sm font-bold uppercase', 'Nenhum candidato cadastrado.'));
+      return;
+    }
+
+    ativos.forEach(function (c) {
+      ultimosTempos[c.id] = c.tempo || '';
+      var linha = el('div', 'bg-zinc-950 border border-zinc-800 p-3 rounded flex items-center justify-between gap-3');
+      var info = el('div');
+      info.appendChild(el('p', 'font-black uppercase text-sm text-white leading-tight', c.nome));
+      info.appendChild(el('p', 'text-[9px] font-bold text-zinc-500 uppercase',
+        (c.matricula ? 'MAT. ' + c.matricula + ' • ' : '') + '-' + c.resultado.pontosPen + ' PTS'));
+      linha.appendChild(info);
+
+      var input = document.createElement('input');
+      input.type = 'text'; input.maxLength = 5; input.placeholder = '00:00';
+      input.value = c.tempo || '';
+      input.dataset.id = c.id;
+      input.className = 'time-input w-24 bg-white text-black text-center font-black text-lg px-2 py-2 rounded';
+      linha.appendChild(input);
+
+      container.appendChild(linha);
+    });
+
+    ligarInputsDeTempo();
+  }
+
+  function ligarInputsDeTempo() {
+    document.querySelectorAll('.time-input').forEach(function (input) {
+      input.addEventListener('input', function (e) {
+        var val = e.target.value.replace(/\D/g, '');
+        if (val.length > 2) val = val.slice(0, 2) + ':' + val.slice(2, 4);
+        e.target.value = val;
+      });
+      input.addEventListener('change', async function (e) {
+        var id = e.target.dataset.id;
+        var valor = e.target.value.trim();
+        if (valor !== '' && !AppUtils.isValidTime(valor)) {
+          alert('Tempo inválido. Use o formato MM:SS.');
+          e.target.value = ultimosTempos[id] || '';
+          return;
+        }
+        try {
+          await AppUtils.salvarTempo(id, valor, '');
+          ultimosTempos[id] = valor;
+        } catch (err) {
+          alert('Falha ao salvar o tempo: ' + err.message);
+        }
+      });
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

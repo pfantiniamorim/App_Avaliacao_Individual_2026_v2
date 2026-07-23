@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Painel de Avaliação — Seleção de Condutores CBMDF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    primary: "#000000", background: "#f9f9f9", secondary: "#5e5e5e", error: "#ba1a1a", success: "#1b5e20",
+    "surface-container-highest": "#e2e2e2", "outline-variant": "#c6c6c6",
+    "penalty-yellow": "#FFD700", "penalty-red": "#FF0000", "penalty-grey": "#71717A"
+  },
+  borderRadius: { DEFAULT: "0px", lg: "0px", xl: "0px", full: "9999px" },
+  fontFamily: { sans: ["Public Sans", "sans-serif"] }
+}}};
+</script>
+<style>
+  body { font-family: 'Public Sans', sans-serif; background-color: #f9f9f9; min-height: max(884px, 100dvh); }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  @keyframes fadeInRow { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  .row-animate { animation: fadeInRow 0.3s ease-out forwards; }
+  .penalty-btn:disabled { opacity: .5; pointer-events: none; }
+</style>
+</head>
+<body class="bg-background text-primary">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 h-14 bg-black text-white font-bold uppercase tracking-tighter flex items-center justify-between px-6">
+  <h1 class="text-lg font-black text-white italic">GBMOT - CBMDF</h1>
+  <span class="text-[10px] font-bold tracking-widest opacity-70" id="display-avaliador">AVALIADOR: —</span>
+</header>
+
+<main class="pt-16 pb-24 px-4 max-w-2xl mx-auto">
+  <!-- Seletor de candidato -->
+  <section class="mb-6 mt-2">
+    <label class="block text-[10px] font-black uppercase tracking-widest mb-2 opacity-60" for="select-candidato">CANDIDATO ATUAL (troque a cada carro que passar)</label>
+    <select class="w-full h-16 bg-white border-b-4 border-black text-xl font-black uppercase px-4 focus:ring-0 focus:outline-none appearance-none cursor-pointer" id="select-candidato">
+      <option value="">— SELECIONE O CANDIDATO —</option>
+    </select>
+  </section>
+
+  <!-- Situação ao vivo do candidato (soma de todos os avaliadores) -->
+  <section class="mb-6 border-l-4 border-black pl-4 hidden" id="bloco-situacao">
+    <p class="text-[10px] font-bold opacity-60 mb-0.5 uppercase">Situação Geral (todos os avaliadores)</p>
+    <div class="flex flex-wrap gap-2 mt-1">
+      <span class="inline-block bg-surface-container-highest px-2 py-0.5 text-[10px] font-bold" id="display-tempo">TEMPO: --:--</span>
+      <span class="inline-block bg-surface-container-highest px-2 py-0.5 text-[10px] font-bold" id="display-total-pen">PENALIDADES: 0</span>
+      <span class="inline-block bg-black text-white px-2 py-0.5 text-[10px] font-bold" id="display-mf">MF: --</span>
+    </div>
+  </section>
+
+  <!-- Exercícios do percurso (referência, vem da config) -->
+  <section class="mb-6">
+    <p class="text-[10px] font-black uppercase tracking-widest mb-2 opacity-60">Exercícios do Percurso</p>
+    <div class="flex flex-wrap gap-1" id="lista-exercicios"></div>
+  </section>
+
+  <!-- Botões de penalidade (gerados da TABELA_PENALIDADES) -->
+  <section class="mb-6">
+    <div class="flex items-center justify-between mb-3 px-1">
+      <h3 class="text-base font-black uppercase tracking-tighter italic">MARCAR PENALIDADE</h3>
+      <span class="text-[10px] font-bold bg-error text-white px-2 py-0.5">TEMPO REAL</span>
+    </div>
+    <div class="grid grid-cols-2 gap-2" id="grade-penalidades"></div>
+    <p class="mt-2 text-[10px] font-bold uppercase tracking-widest text-secondary text-center" id="aviso-selecione">Selecione um candidato para habilitar os botões.</p>
+  </section>
+
+  <!-- Minhas marcações (deste avaliador, neste candidato) -->
+  <section>
+    <div class="flex items-center gap-2 mb-4 border-b-2 border-black pb-1.5">
+      <span class="material-symbols-outlined text-xs">history</span>
+      <h3 class="font-black uppercase tracking-widest text-[11px]">MINHAS MARCAÇÕES NESTE CANDIDATO</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse bg-white">
+        <thead>
+          <tr class="bg-black text-white">
+            <th class="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-r border-white/20">Infração</th>
+            <th class="px-3 py-2 text-[10px] font-black uppercase tracking-widest border-r border-white/20">Horário</th>
+            <th class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-center">Pts</th>
+            <th class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ação</th>
+          </tr>
+        </thead>
+        <tbody class="text-[11px] font-bold" id="log-table-body"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-20 px-4 bg-black z-50">
+  <a href="index.html" class="flex flex-col items-center justify-center text-zinc-500 hover:text-white w-full h-full transition-all">
+    <span class="material-symbols-outlined text-2xl">home</span>
+    <span class="font-bold text-[10px] uppercase mt-1">INICIAL</span>
+  </a>
+  <a href="selecao.html" class="flex flex-col items-center justify-center text-zinc-500 hover:text-white w-full h-full transition-all">
+    <span class="material-symbols-outlined text-2xl">swap_horiz</span>
+    <span class="font-bold text-[10px] uppercase mt-1">TROCAR</span>
+  </a>
+  <a href="logs.html" class="flex flex-col items-center justify-center text-zinc-500 hover:text-white w-full h-full transition-all">
+    <span class="material-symbols-outlined text-2xl">history</span>
+    <span class="font-bold text-[10px] uppercase mt-1">LOGS</span>
+  </a>
+</nav>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script>
+(function () {
+  var CFG = window.APP_CONFIG;
+  var el = AppUtils.el;
+
+  // Sem avaliador identificado, volta para a tela de identificação
+  var avaliador = localStorage.getItem('cond_avaliador');
+  if (!avaliador) {
+    window.location.replace('selecao.html');
+    return;
+  }
+  document.getElementById('display-avaliador').textContent = 'AVALIADOR: ' + avaliador;
+
+  // Exercícios do percurso (referência)
+  var listaEx = document.getElementById('lista-exercicios');
+  (CFG.EXERCICIOS || []).forEach(function (ex, i) {
+    listaEx.appendChild(el('span', 'bg-surface-container-highest px-2 py-1 text-[10px] font-bold uppercase', (i + 1) + '. ' + ex));
+  });
+
+  var selectCandidato = document.getElementById('select-candidato');
+  var candidatoId = '';
+  var candidatoNome = '';
+  var ultimoAgregado = {}; // id -> objeto agregado (para a Situação Geral)
+
+  // Marcações feitas por ESTE avaliador nesta aba, para o candidato atual
+  // (permite desfazer sem depender de reler a planilha)
+  var minhasMarcacoes = []; // [{ts, key}]
+
+  /* ---- Botões de penalidade gerados da TABELA_PENALIDADES ---- */
+  var estilos = [
+    'bg-penalty-yellow text-black',
+    'bg-penalty-red text-white',
+    'bg-black text-white border-2 border-white',
+    'bg-penalty-grey text-white'
+  ];
+  var botoes = [];
+  var grade = document.getElementById('grade-penalidades');
+  CFG.TABELA_PENALIDADES.forEach(function (p, i) {
+    var elim = AppUtils.isEliminatoria(p);
+    var btn = el('button',
+      'penalty-btn flex flex-col items-center justify-center p-4 h-28 active:scale-95 transition-transform ' +
+      (elim ? 'bg-error text-white border-4 border-black' : estilos[i % estilos.length]));
+    btn.appendChild(el('span', 'font-black text-base uppercase tracking-tighter text-center leading-none', p.nome));
+    btn.appendChild(el('span', 'text-sm font-bold mt-2', elim ? 'ELIMINATÓRIO' : '(-' + p.pontos + ')'));
+    btn.disabled = true;
+    btn.addEventListener('click', async function () {
+      if (!candidatoId) return;
+      if (elim && !confirm('Registrar infração ELIMINATÓRIA (' + p.nome + ') para ' + candidatoNome + '? O candidato será ELIMINADO.')) return;
+
+      btn.disabled = true;
+      try {
+        var ts = await AppUtils.marcarPenalidade({
+          avaliador: avaliador, candidatoId: candidatoId, candidato: candidatoNome, penaltyKey: p.key
+        });
+        minhasMarcacoes.push({ ts: ts, key: p.key, hora: new Date().toLocaleTimeString('pt-BR') });
+        renderMinhasMarcacoes();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    grade.appendChild(btn);
+    botoes.push(btn);
+  });
+
+  function habilitarBotoes(habilitar) {
+    botoes.forEach(function (b) { b.disabled = !habilitar; });
+    document.getElementById('aviso-selecione').classList.toggle('hidden', habilitar);
+  }
+
+  /* ---- Minhas marcações (desfazer) ---- */
+  function renderMinhasMarcacoes() {
+    var tbody = document.getElementById('log-table-body');
+    tbody.textContent = '';
+    minhasMarcacoes.slice().reverse().forEach(function (o) {
+      var idx = minhasMarcacoes.indexOf(o);
+      var p = AppUtils.penaltyByKey(o.key);
+      var tr = el('tr', 'border-b border-outline-variant row-animate bg-white');
+      tr.appendChild(el('td', 'px-3 py-3 uppercase', p ? p.nome : o.key));
+      tr.appendChild(el('td', 'px-3 py-3 font-normal opacity-70', o.hora));
+      tr.appendChild(el('td', 'px-3 py-3 text-center text-error font-black',
+        p && AppUtils.isEliminatoria(p) ? 'ELIM.' : (p ? '-' + p.pontos : '')));
+      var td = el('td', 'px-3 py-3 text-right');
+      var btnRem = el('button', 'text-[9px] underline uppercase font-black hover:text-error', 'Remover');
+      btnRem.addEventListener('click', async function () {
+        btnRem.disabled = true;
+        try {
+          await AppUtils.removerPenalidade(o.ts);
+          minhasMarcacoes.splice(idx, 1);
+          renderMinhasMarcacoes();
+        } catch (e) {
+          alert('Falha ao remover: ' + e.message);
+          btnRem.disabled = false;
+        }
+      });
+      td.appendChild(btnRem);
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ---- Troca de candidato ---- */
+  function selecionarCandidato(id) {
+    candidatoId = id;
+    var opt = selectCandidato.querySelector('option[value="' + id + '"]');
+    candidatoNome = opt ? (opt.dataset.nome || opt.textContent) : '';
+    minhasMarcacoes = [];
+    renderMinhasMarcacoes();
+    habilitarBotoes(!!id);
+    document.getElementById('bloco-situacao').classList.toggle('hidden', !id);
+    localStorage.setItem('cond_candidatoId', id);
+    atualizarSituacao();
+  }
+
+  selectCandidato.addEventListener('change', function () {
+    selecionarCandidato(selectCandidato.value);
+  });
+
+  /* ---- Situação geral do candidato (agregado de todos os avaliadores) ---- */
+  function atualizarSituacao() {
+    if (!candidatoId) return;
+    var c = ultimoAgregado[candidatoId];
+    if (!c) return;
+    document.getElementById('display-tempo').textContent = 'TEMPO: ' + (c.tempo || '--:--');
+    document.getElementById('display-total-pen').textContent = 'PENALIDADES: -' + c.resultado.pontosPen;
+    var mfEl = document.getElementById('display-mf');
+    mfEl.textContent = 'MF: ' + (c.resultado.eliminado ? 'ELIM.' : (c.resultado.mf === null ? '--' : c.resultado.mf.toFixed(2)));
+  }
+
+  // Popula/atualiza o dropdown mantendo a seleção atual
+  function atualizarDropdown(candidatosObj) {
+    var atual = selectCandidato.value;
+    var lista = Object.values(candidatosObj || {})
+      .filter(function (c) { return c.ativo !== false && c.nome; })
+      .sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+
+    selectCandidato.textContent = '';
+    var vazio = el('option', null, '— SELECIONE O CANDIDATO —');
+    vazio.value = '';
+    selectCandidato.appendChild(vazio);
+    lista.forEach(function (c) {
+      var o = el('option', null, c.nome + (c.matricula ? ' — ' + c.matricula : ''));
+      o.value = c.id;
+      o.dataset.nome = c.nome;
+      selectCandidato.appendChild(o);
+    });
+
+    // Restaura seleção anterior (desta sessão ou persistida) se ainda existir
+    var restaurar = atual || localStorage.getItem('cond_candidatoId') || '';
+    if (restaurar && selectCandidato.querySelector('option[value="' + restaurar + '"]')) {
+      selectCandidato.value = restaurar;
+      if (restaurar !== candidatoId) selecionarCandidato(restaurar);
+    } else if (candidatoId && !selectCandidato.querySelector('option[value="' + candidatoId + '"]')) {
+      // Candidato selecionado foi removido/desativado
+      selecionarCandidato('');
+    }
+  }
+
+  AppUtils.iniciarPolling(function (data) {
+    if (!data) return;
+    atualizarDropdown(data.candidatos);
+    var porId = {};
+    data.agregado.forEach(function (c) { porId[c.id] = c; });
+    ultimoAgregado = porId;
+    atualizarSituacao();
+  });
+})();
+</script>
+</body>
+</html>
