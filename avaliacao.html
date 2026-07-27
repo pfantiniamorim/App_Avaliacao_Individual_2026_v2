@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Painel de Avaliação — Seletiva CECEM</title>
+<title>Painel de Avaliação — Seleção de Condutores CBMDF</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -50,6 +50,12 @@ tailwind.config = { theme: { extend: {
       <span class="inline-block bg-surface-container-highest px-2 py-0.5 text-[10px] font-bold" id="display-total-pen">PENALIDADES: 0</span>
       <span class="inline-block bg-black text-white px-2 py-0.5 text-[10px] font-bold" id="display-mf">MF: --</span>
     </div>
+  </section>
+
+  <!-- Exercícios do percurso (referência, vem da config) -->
+  <section class="mb-6">
+    <p class="text-[10px] font-black uppercase tracking-widest mb-2 opacity-60">Exercícios do Percurso</p>
+    <div class="flex flex-wrap gap-1" id="lista-exercicios"></div>
   </section>
 
   <!-- Botões de penalidade (gerados da TABELA_PENALIDADES) -->
