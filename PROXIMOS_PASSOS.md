@@ -89,6 +89,62 @@ volta da planilha.
   desvio=100, segurança=ELIMINATÓRIO) — conferir se batem com o edital
   vigente; pode mudar de teste para teste.
 
+## Achados do /code-review (2026-07-24) — simplificação e otimização
+
+Revisão do código atual (`js/utils.js`, `js/config.js`, `apps_script/Code.gs`,
+todas as telas). Todos os 8 itens abaixo foram **verificados linha a linha**
+contra o código real antes de entrar aqui. Nenhum foi corrigido ainda —
+ordenados do mais para o menos importante.
+
+### Risco real (corrigir antes do próximo teste com muitos avaliadores)
+
+1. **`apps_script/Code.gs:31`** — `doPost()` chama `lock.tryLock(15000)` mas
+   nunca confere o retorno booleano. Se o lock falhar sob disputa (vários
+   avaliadores marcando ao mesmo tempo), a leitura-e-escrita de
+   `gravarTempo`/`salvarCandidato`/`removerPorColuna` roda sem proteção real e
+   pode corromper/sobrescrever um registro. **Fix:** se `tryLock` retornar
+   `false`, responder erro pedindo para tentar de novo, em vez de prosseguir.
+2. **`js/utils.js:342`** (`iniciarPolling`) — o `setInterval` não trava contra
+   execução sobreposta, e `reenviarPendentes()` é chamado sem `await`. Em
+   conexão lenta, dois ciclos podem ler e reenviar a mesma fila offline,
+   duplicando uma penalidade em `REGISTROS`. **Fix:** guardar um flag
+   "ciclo em andamento" e pular o tick se o anterior ainda não terminou; ou
+   trocar `setInterval` por um laço que só reagenda após o `tick()` anterior
+   resolver.
+
+### Código morto
+
+3. **`js/utils.js:270`** — o critério de desempate `"antiguidade"` em
+   `classificarRanking()` compara um campo que não existe mais em lugar
+   nenhum (removido do cadastro por pedido da usuária). Hoje é inofensivo
+   porque `CRITERIOS_DESEMPATE` padrão não o inclui, mas fica "morto e
+   armadilhado" — se alguém adicionar de volta, falha silenciosamente.
+   **Fix:** remover o ramo `else if (crt === "antiguidade")` inteiro.
+
+### Duplicação (manutenção)
+
+4. **Ordenação por `ts` decrescente copiada 3x** — `dashboard.html:155`,
+   `dashboard.html:183` e `logs.html:114` repetem a mesma expressão de sort.
+   **Fix:** extrair para `AppUtils.ordenarPorTsDesc(lista)` em `js/utils.js`.
+5. **Guarda "campo em foco" duplicada** — `dashboard.html:132`
+   (`algumTempoEmFoco`) e `participantes.html:110` (`algumCampoEmFoco`)
+   reimplementam a mesma checagem via `document.activeElement`. **Fix:**
+   `AppUtils.algumCampoComClasseEmFoco(classe)` genérico em `js/utils.js`.
+6. **ID da planilha repetido 3x** — `js/config.js:26-28` colam o mesmo ID em
+   três URLs, contradizendo o comentário que diz bastar trocar "o ID".
+   **Fix:** uma constante `SHEET_ID` e as 3 URLs montadas por template string.
+
+### Eficiência (baixo impacto, fácil de aplicar)
+
+7. **`js/utils.js:317`** — `tick()` sempre busca as 3 abas (CANDIDATOS,
+   REGISTROS, RESULTADOS) mesmo em telas que só usam uma (`logs.html` só usa
+   registros; `participantes.html` só usa candidatos). Com 15 avaliadores
+   sondando a cada 12s, é banda e cota do Google desperdiçadas.
+8. **`dashboard.html:233`** — `ligarInputsDeTempo()` reconsulta todos os
+   `.time-input` com `querySelectorAll` numa passagem separada, quando
+   `renderTempos()` já tinha a referência do `input` recém-criado no laço.
+   **Fix:** anexar os listeners direto ali, sem a segunda passagem.
+
 ## Limitações conhecidas (aceitas para manter custo zero)
 
 - App 100% estático: qualquer visitante consegue ler o código-fonte via F12
