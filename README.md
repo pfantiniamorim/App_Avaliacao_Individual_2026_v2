@@ -28,3 +28,8 @@ Todo o passo a passo (planilha, Apps Script, GitHub Pages) está em
 Todas as regras do edital (fórmula da nota, tabela de tempo, tabela de
 penalidades, tempo máximo, critérios de desempate) ficam em
 [`js/config.js`](js/config.js) — nunca no código da lógica.
+
+## Próximos passos
+
+Backlog técnico, limitações conhecidas e como retomar o desenvolvimento:
+[`PROXIMOS_PASSOS.md`](PROXIMOS_PASSOS.md).
