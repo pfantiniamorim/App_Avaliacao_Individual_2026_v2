@@ -12,20 +12,27 @@
 
    Carregar em toda página ANTES de js/utils.js.
    ========================================================= */
+/* ID da planilha "Selecao_Condutores_2026" — a MESMA usada pelo app de
+   agendamento (pfantiniamorim/painel-de-agendamento), que lê a aba
+   CANDIDATOS como lista de militares. Trocar aqui troca as 3 URLs. */
+var SHEET_ID = "18GTuzXfIRfwwHrq_DODcuv0NFxRkdq_wvum0REJvS_g";
+var CSV_ABA = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&sheet=";
+
 window.APP_CONFIG = {
 
   /* ================= INTEGRAÇÃO COM A PLANILHA =================
      Passo a passo completo em CONFIGURAR_PLANILHA.md
      (mesma planilha, 3 abas: CANDIDATOS, REGISTROS, RESULTADOS) */
 
-  // URL do Web App do Google Apps Script (termina em /exec)
+  // URL do Web App do Google Apps Script (termina em /exec).
+  // É o script VINCULADO à planilha (Extensões → Apps Script), que serve
+  // só este app. O agendamento tem implantação própria e separada.
   ENDPOINT_APPS_SCRIPT: "https://script.google.com/macros/s/AKfycby6XB_N0NkWVqJTKfYUIu_7ifeTeTvJryNe5FIRvMtPpomkdRlVyJt5W4zl4OYAFpbc/exec",
 
-  // URLs CSV de leitura (uma por aba). Trocar apenas o ID se
-  // usar outra planilha. Sheet ID atual: 18GTuzXfIRfw...vS_g
-  CSV_CANDIDATOS_URL: "https://docs.google.com/spreadsheets/d/18GTuzXfIRfwwHrq_DODcuv0NFxRkdq_wvum0REJvS_g/gviz/tq?tqx=out:csv&sheet=CANDIDATOS",
-  CSV_REGISTROS_URL:  "https://docs.google.com/spreadsheets/d/18GTuzXfIRfwwHrq_DODcuv0NFxRkdq_wvum0REJvS_g/gviz/tq?tqx=out:csv&sheet=REGISTROS",
-  CSV_RESULTADOS_URL: "https://docs.google.com/spreadsheets/d/18GTuzXfIRfwwHrq_DODcuv0NFxRkdq_wvum0REJvS_g/gviz/tq?tqx=out:csv&sheet=RESULTADOS",
+  // URLs CSV de leitura (uma por aba)
+  CSV_CANDIDATOS_URL: CSV_ABA + "CANDIDATOS",
+  CSV_REGISTROS_URL:  CSV_ABA + "REGISTROS",
+  CSV_RESULTADOS_URL: CSV_ABA + "RESULTADOS",
 
   // Intervalo do polling de leitura (ms) — atualização da visão agregada
   POLLING_MS: 12000,

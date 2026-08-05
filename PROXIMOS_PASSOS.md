@@ -1,6 +1,24 @@
 # Próximos Passos — Teste de Seleção de Condutores
 
-Backlog técnico para retomar em sessões futuras. Atualizado em 2026-07-24.
+Backlog técnico para retomar em sessões futuras. Atualizado em 2026-08-05.
+
+## 2026-08-05 — Sincronização com o app de agendamento (3º CECEM/2026)
+
+O edital nº 047/2026-CBMDF/DIREN/SEITC foi publicado e a planilha
+`Selecao_Condutores_2026` passou a ser compartilhada com o
+[`painel-de-agendamento`](https://github.com/pfantiniamorim/painel-de-agendamento).
+Diagnóstico e correções desta sessão:
+
+| Achado | Situação |
+|---|---|
+| **Escrita do app quebrada**: os dois apps apontavam para a MESMA URL `/exec`. Como a planilha só admite um script vinculado, colar o `Code.gs` do agendamento por cima apagou o `doPost` daqui — penalidade, tempo e cadastro respondiam `ACAO_INVALIDA` | ✅ Resolvido: o script vinculado volta a ser **exclusivo deste app**; o agendamento virou projeto independente com implantação própria. `ENDPOINT_APPS_SCRIPT` não mudou |
+| **Cadastro duplo**: este app chaveava por `ID`, o agendamento por `MATRICULA`, e 54 dos 56 candidatos estavam sem `ID` — o app enxergava só 2 pessoas | ✅ Resolvido: a chave passou a ser a `MATRICULA` (`parseCandidatos`), com o `ID` legado como reserva. Os 56 aparecem nos dois apps |
+| `ATIVO = "NÃO"` (com til) não desativava aqui, mas desativava no agendamento | ✅ Resolvido: `AppUtils.candidatoAtivo()` normaliza o acento |
+| Pontuação ainda com valores de exemplo | 🔶 Pendente do PDF do edital (ver item 3 abaixo) |
+
+**Reimplantar é obrigatório** depois de colar o `apps_script/Code.gs` novo:
+Implantar → Gerenciar implantações → ✏️ → Versão: **Nova versão** → Implantar.
+Sem isso a URL continua servindo o código antigo.
 
 ## Estado atual (o que já está pronto e publicado)
 
@@ -80,14 +98,27 @@ volta da planilha.
   Auditoria" do `dashboard.html`, chamando a mesma `removerPenalidade(ts)`
   com confirmação — tela já protegida por PIN.
 
-### 3. Valores de exemplo a substituir pelo edital real
+### 3. Valores de exemplo a substituir pelo edital real ⚠ PENDENTE
 
-- `TABELA_TEMPO` em `js/config.js` está com faixas de exemplo (100→02:30,
-  90→02:45 …). Substituir pelos valores reais do edital antes de uma prova
-  oficial.
-- `TABELA_PENALIDADES` (toque=3, derrubada=10, apagar viatura=10,
-  desvio=100, segurança=ELIMINATÓRIO) — conferir se batem com o edital
-  vigente; pode mudar de teste para teste.
+O **edital nº 047/2026-CBMDF/DIREN/SEITC (3º CECEM/2026)** já está publicado
+em [ensino.cbm.df.gov.br](https://ensino.cbm.df.gov.br/edital-no-047-2026-cbmdf-diren-seitc-referente-a-abertura-do-processo-seletivo-para-o-3o-curso-de-especializacao-para-condutores-de-veiculos-de-emergencia-3o-cecem-2026/),
+mas o domínio é bloqueado pela política de saída das sessões do Claude Code
+(403 no CONNECT do proxy). **A transcrição depende do PDF ser enviado no
+chat ou pelo Google Drive.**
+
+A substituir em `js/config.js`, e só ali:
+
+- `TABELA_TEMPO` — faixas de exemplo (100→02:30, 90→02:45 …).
+- `TABELA_PENALIDADES` — toque=3, derrubada=10, apagar viatura=10,
+  desvio=100, segurança=ELIMINATÓRIO.
+- `TEMPO_MAXIMO` (`04:06`), `FORMULA_NOTA`
+  (`(PONTUACAO_TEMPO * 1.75 + 100 - PENALIDADES) / 2.75`),
+  `CRITERIOS_DESEMPATE` e `EXERCICIOS`.
+
+Conferir também contra o edital, sem alterar por conta própria: as **datas
+da seletiva** na aba `Faixas` da planilha (hoje 10–13/08/2026, enquanto o
+curso está previsto para 28/09–28/10/2026), o **local** (`15º GBM`) e as
+**60 vagas** (4/4/4/3 por faixa) contra os 56 convocados cadastrados.
 
 ## Achados do /code-review (2026-07-24) — simplificação e otimização
 
@@ -98,12 +129,12 @@ ordenados do mais para o menos importante.
 
 ### Risco real (corrigir antes do próximo teste com muitos avaliadores)
 
-1. **`apps_script/Code.gs:31`** — `doPost()` chama `lock.tryLock(15000)` mas
-   nunca confere o retorno booleano. Se o lock falhar sob disputa (vários
-   avaliadores marcando ao mesmo tempo), a leitura-e-escrita de
-   `gravarTempo`/`salvarCandidato`/`removerPorColuna` roda sem proteção real e
-   pode corromper/sobrescrever um registro. **Fix:** se `tryLock` retornar
-   `false`, responder erro pedindo para tentar de novo, em vez de prosseguir.
+1. ✅ **RESOLVIDO em 2026-08-05** — **`apps_script/Code.gs`** `doPost()` chamava
+   `lock.tryLock(15000)` sem conferir o retorno booleano. Se o lock falhasse sob
+   disputa (vários avaliadores marcando ao mesmo tempo), a leitura-e-escrita de
+   `gravarTempo`/`salvarCandidato`/`removerPorColuna` rodava sem proteção real e
+   podia corromper/sobrescrever um registro. Agora responde
+   "Servidor ocupado, tente de novo em instantes." e o app reenvia pela fila.
 2. **`js/utils.js:342`** (`iniciarPolling`) — o `setInterval` não trava contra
    execução sobreposta, e `reenviarPendentes()` é chamado sem `await`. Em
    conexão lenta, dois ciclos podem ler e reenviar a mesma fila offline,
@@ -114,12 +145,10 @@ ordenados do mais para o menos importante.
 
 ### Código morto
 
-3. **`js/utils.js:270`** — o critério de desempate `"antiguidade"` em
-   `classificarRanking()` compara um campo que não existe mais em lugar
-   nenhum (removido do cadastro por pedido da usuária). Hoje é inofensivo
-   porque `CRITERIOS_DESEMPATE` padrão não o inclui, mas fica "morto e
-   armadilhado" — se alguém adicionar de volta, falha silenciosamente.
-   **Fix:** remover o ramo `else if (crt === "antiguidade")` inteiro.
+3. ✅ **RESOLVIDO em 2026-08-05** — **`js/utils.js`** o critério de desempate
+   `"antiguidade"` em `classificarRanking()` comparava um campo que não existe
+   mais em lugar nenhum. Ramo removido. Também saiu `idCurto()`, que perdeu o
+   último uso quando a matrícula virou a chave do cadastro.
 
 ### Duplicação (manutenção)
 
@@ -130,9 +159,9 @@ ordenados do mais para o menos importante.
    (`algumTempoEmFoco`) e `participantes.html:110` (`algumCampoEmFoco`)
    reimplementam a mesma checagem via `document.activeElement`. **Fix:**
    `AppUtils.algumCampoComClasseEmFoco(classe)` genérico em `js/utils.js`.
-6. **ID da planilha repetido 3x** — `js/config.js:26-28` colam o mesmo ID em
-   três URLs, contradizendo o comentário que diz bastar trocar "o ID".
-   **Fix:** uma constante `SHEET_ID` e as 3 URLs montadas por template string.
+6. ✅ **RESOLVIDO em 2026-08-05** — **ID da planilha repetido 3x** em
+   `js/config.js`, contradizendo o comentário que dizia bastar trocar "o ID".
+   Agora há uma constante `SHEET_ID` e as 3 URLs são montadas a partir dela.
 
 ### Eficiência (baixo impacto, fácil de aplicar)
 

@@ -19,6 +19,14 @@ de cada candidato é a soma das marcações de todos, tudo auditável na planilh
    ID | NOME_GUERRA | MATRICULA | ATIVO
    ```
 
+   > **A chave do cadastro é a `MATRICULA`** — a mesma que o app de
+   > agendamento ([`painel-de-agendamento`](https://github.com/pfantiniamorim/painel-de-agendamento))
+   > usa para ler esta aba. É por isso que os dois apps enxergam **um
+   > cadastro só**. A coluna `ID` continua existindo por compatibilidade e
+   > recebe a própria matrícula a cada gravação; linha antiga com `ID`
+   > gerado (ex.: `c72647690`) é reconhecida e migrada sozinha na primeira
+   > edição pelo `participantes.html`, sem duplicar.
+
    **REGISTROS** (log auditável — 1 linha por penalidade marcada)
    ```
    TS | DATA_HORA | AVALIADOR | CANDIDATO_ID | CANDIDATO | TIPO_PENALIDADE | PONTOS
@@ -33,6 +41,14 @@ de cada candidato é a soma das marcações de todos, tudo auditável na planilh
 > app, pode deixá-la ali sem problema (não é mais usada) ou apagá-la.
 
 ## 2. Instalar o Apps Script (escrita automática)
+
+> ⚠ **Este é o script VINCULADO à planilha, e ele é exclusivo deste app.**
+> Uma planilha admite **um único** script vinculado. O app de agendamento
+> compartilha a mesma planilha, mas roda num projeto **independente**
+> (script.google.com → Novo projeto), com implantação e URL próprias.
+> Colar o `Code.gs` de um por cima do outro aqui apaga o `doPost` do outro
+> app — foi o que aconteceu em 05/08/2026 e deixou a marcação de
+> penalidades respondendo "Ação inválida".
 
 1. Na planilha: **Extensões → Apps Script**.
 2. Apague o conteúdo e cole o arquivo [`apps_script/Code.gs`](apps_script/Code.gs).

@@ -176,16 +176,29 @@
   }
 
   /* ---------------- Parsers das 3 abas ---------------- */
+
+  // ATIVO da aba CANDIDATOS. Mesma leitura do app de agendamento, que
+  // reaproveita esta coluna: quem sai daqui também perde o agendamento.
+  // Aceita "NAO" e "NÃO" — a planilha é digitada à mão.
+  function candidatoAtivo(valor) {
+    var v = String(valor || "").trim().toUpperCase().replace(/Ã/g, "A");
+    return v !== "NAO" && v !== "N" && v !== "FALSO" && v !== "FALSE" && v !== "0";
+  }
+
+  /* A chave do candidato é a MATRICULA — o mesmo identificador que o app de
+     agendamento usa, para os dois lerem UM cadastro só. O ID legado só entra
+     como reserva, para linha antiga que não tenha matrícula. */
   function parseCandidatos(objs) {
     var out = {};
     (objs || []).forEach(function (o) {
-      var id = (o.ID || "").trim();
-      if (!id) return;
-      out[id] = {
-        id: id,
+      var matricula = (o.MATRICULA || "").trim();
+      var chave = matricula || (o.ID || "").trim();
+      if (!chave) return;
+      out[chave] = {
+        id: chave,
         nome: (o.NOME_GUERRA || o.NOME || "").trim(),
-        matricula: (o.MATRICULA || "").trim(),
-        ativo: String(o.ATIVO || "").trim().toUpperCase() !== "NAO"
+        matricula: matricula,
+        ativo: candidatoAtivo(o.ATIVO)
       };
     });
     return out;
@@ -267,10 +280,6 @@
             if (ta !== tb) return ta - tb;
           } else if (crt === "penalidades") {
             if (a.resultado.pontosPen !== b.resultado.pontosPen) return a.resultado.pontosPen - b.resultado.pontosPen;
-          } else if (crt === "antiguidade") {
-            var aa = a.antiguidade === null ? Infinity : a.antiguidade;
-            var ab = b.antiguidade === null ? Infinity : b.antiguidade;
-            if (aa !== ab) return aa - ab;
           }
         }
         return (a.nome || "").localeCompare(b.nome || "");
@@ -521,10 +530,6 @@
     return n;
   }
 
-  function idCurto() {
-    return "c" + String(Date.now()).slice(-6) + Math.floor(10 + (window.crypto ? crypto.getRandomValues(new Uint32Array(1))[0] % 89 : 0));
-  }
-
   window.AppUtils = {
     timeToSeconds: timeToSeconds, isValidTime: isValidTime, horaAgora: horaAgora, fmtHoje: fmtHoje,
     penaltyByKey: penaltyByKey, isEliminatoria: isEliminatoria, pontosPenalidades: pontosPenalidades,
@@ -537,7 +542,7 @@
     marcarPenalidade: marcarPenalidade, removerPenalidade: removerPenalidade,
     salvarTempo: salvarTempo, salvarCandidato: salvarCandidato, removerCandidato: removerCandidato,
     reenviarPendentes: reenviarPendentes, lerFila: lerFila,
-    el: el, idCurto: idCurto,
+    el: el, candidatoAtivo: candidatoAtivo,
     pedirPin: pedirPin, sairChefe: sairChefe
   };
 })();

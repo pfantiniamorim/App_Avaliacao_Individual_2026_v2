@@ -203,10 +203,15 @@ tailwind.config = { theme: { extend: {
     var matricula = document.getElementById('novo-matricula').value.trim();
     if (!nome || !matricula) return;
 
+    // A matrícula É a chave do cadastro (a mesma que o app de agendamento usa),
+    // então repetir não cria um segundo candidato — sobrescreveria o existente.
     var dup = Object.values(candidatosAtuais).some(function (c) { return (c.matricula || '') === matricula; });
-    if (dup && !confirm('Já existe um candidato com a matrícula ' + matricula + '. Adicionar mesmo assim?')) return;
+    if (dup) {
+      alert('Já existe um candidato com a matrícula ' + matricula + '. Edite a linha dele na lista abaixo.');
+      return;
+    }
 
-    await salvar({ id: AppUtils.idCurto(), nome: nome, matricula: matricula, ativo: true });
+    await salvar({ id: matricula, nome: nome, matricula: matricula, ativo: true });
     document.getElementById('novo-nome').value = '';
     document.getElementById('novo-matricula').value = '';
     document.getElementById('novo-nome').focus();
