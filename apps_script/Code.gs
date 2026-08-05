@@ -24,8 +24,11 @@
    - "removerCandidato"  → remove candidato de CANDIDATOS
    ========================================================= */
 
+// ANTIGUIDADE é opcional e fica na 5ª coluna, DEPOIS de ATIVO — o app só a
+// lê (3º critério de desempate do edital), nunca escreve nela: salvarCandidato
+// grava apenas as 4 primeiras colunas, então o valor digitado ali é preservado.
 var ABAS = {
-  CANDIDATOS: ['ID', 'NOME_GUERRA', 'MATRICULA', 'ATIVO'],
+  CANDIDATOS: ['ID', 'NOME_GUERRA', 'MATRICULA', 'ATIVO', 'ANTIGUIDADE'],
   REGISTROS:  ['TS', 'DATA_HORA', 'AVALIADOR', 'CANDIDATO_ID', 'CANDIDATO', 'TIPO_PENALIDADE', 'PONTOS'],
   RESULTADOS: ['CANDIDATO_ID', 'TEMPO', 'STATUS']
 };

@@ -98,27 +98,61 @@ volta da planilha.
   Auditoria" do `dashboard.html`, chamando a mesma `removerPenalidade(ts)`
   com confirmação — tela já protegida por PIN.
 
-### 3. Valores de exemplo a substituir pelo edital real ⚠ PENDENTE
+### 3. ✅ Valores do edital 047/2026 transcritos — resta a fórmula da MF
 
-O **edital nº 047/2026-CBMDF/DIREN/SEITC (3º CECEM/2026)** já está publicado
-em [ensino.cbm.df.gov.br](https://ensino.cbm.df.gov.br/edital-no-047-2026-cbmdf-diren-seitc-referente-a-abertura-do-processo-seletivo-para-o-3o-curso-de-especializacao-para-condutores-de-veiculos-de-emergencia-3o-cecem-2026/),
-mas o domínio é bloqueado pela política de saída das sessões do Claude Code
-(403 no CONNECT do proxy). **A transcrição depende do PDF ser enviado no
-chat ou pelo Google Drive.**
+Transcrito em 05/08/2026 para `js/config.js`, a partir do item 8 do
+**edital nº 047/2026-CBMDF/DIREN/SEITC (3º CECEM/2026)**:
 
-A substituir em `js/config.js`, e só ali:
+- `TABELA_TEMPO` — **96 faixas**, segundo a segundo, do quadro "DO TEMPO":
+  02:30 = 100,00 … 04:05 = 10,00.
+- `TEMPO_MAXIMO` = **04:05** ("o tempo máximo para execução do TPP será de
+  04:05:00"). O rodapé do quadro diz "> 04:06:00 ELIMINADO", mas não há
+  pontuação para 04:06 — prevalece o texto do item.
+- `TABELA_PENALIDADES` — toque em cone/balizador 3, derrubada 10,
+  interromper o motor 10, desvio/erro de percurso 100, atentar contra a
+  segurança ELIMINATÓRIO.
+- `EXERCICIOS` — os 7 do item 8.1.1 (slalom de alta, baliza, slalom de
+  baixa, corredor "N", marcha ré, garagem balizada, "oito").
+- `CRITERIOS_DESEMPATE` — menor tempo → menos penalidades → **antiguidade
+  militar** (o edital reintroduziu o 3º critério).
 
-- `TABELA_TEMPO` — faixas de exemplo (100→02:30, 90→02:45 …).
-- `TABELA_PENALIDADES` — toque=3, derrubada=10, apagar viatura=10,
-  desvio=100, segurança=ELIMINATÓRIO.
-- `TEMPO_MAXIMO` (`04:06`), `FORMULA_NOTA`
-  (`(PONTUACAO_TEMPO * 1.75 + 100 - PENALIDADES) / 2.75`),
-  `CRITERIOS_DESEMPATE` e `EXERCICIOS`.
+**⚠ Falta a fórmula da MF.** O trecho recebido tem "A média final (MF) será
+determinada da seguinte forma:" e emenda no quadro do tempo — a fórmula em
+si não veio (provavelmente é uma imagem no PDF). `FORMULA_NOTA` continua com
+a do edital anterior,
+`(PONTUACAO_TEMPO * 1.75 + 100 - PENALIDADES) / 2.75`, que é coerente com o
+item 8.2.1 ("o candidato iniciará com 100 pontos, sendo descontados os
+pontos das infrações") mas **precisa ser conferida no Anexo antes da prova
+oficial**.
 
-Conferir também contra o edital, sem alterar por conta própria: as **datas
-da seletiva** na aba `Faixas` da planilha (hoje 10–13/08/2026, enquanto o
-curso está previsto para 28/09–28/10/2026), o **local** (`15º GBM`) e as
-**60 vagas** (4/4/4/3 por faixa) contra os 56 convocados cadastrados.
+Conferir também, sem alterar por conta própria: as **datas da seletiva** na
+aba `Faixas` da planilha (hoje 10–13/08/2026, enquanto o curso está previsto
+para 28/09–28/10/2026) e as **60 vagas de agendamento** (4/4/4/3 por faixa)
+contra os 56 convocados cadastrados.
+
+### 3.1. Coluna `ANTIGUIDADE` (opcional) — 3º critério de desempate
+
+O edital exige antiguidade militar como último desempate. O app lê uma
+coluna **`ANTIGUIDADE`** na aba `CANDIDATOS`, número, **menor = mais
+antigo** — a ser preenchida direto na planilha pelo Chefe (não há campo para
+ela no `participantes.html`, e o app **nunca escreve** nessa coluna:
+`salvarCandidato` grava só as 4 primeiras).
+
+É a **5ª coluna**, depois de `ATIVO` — acrescentar no fim não desloca nada e
+não afeta o app de agendamento, que lê pelo nome da coluna. Coluna vazia = o
+critério não desempata nada e a decisão fica com o Chefe.
+
+### 3.2. ⚠ Vagas por categoria não estão modeladas no ranking
+
+O edital distribui as **24 vagas do curso** por categoria — 2 QOBM/Comb.
+(até Major), 14 QBMG-2, 2 QBMG-3, 4 GBMOT e 2 externas — com regras de
+redistribuição entre elas. O `ranking.html` produz **uma lista única** por
+MF, sem separar por categoria: serve para apurar a nota e a ordem, mas **não
+decide sozinho quem ocupa qual vaga**.
+
+Para o app fazer esse corte seria preciso uma coluna de categoria em
+`CANDIDATOS` e um agrupamento no ranking. Decisão em aberto — hoje a
+classificação por categoria é feita à mão sobre a lista que o app gera.
 
 ## Achados do /code-review (2026-07-24) — simplificação e otimização
 

@@ -194,11 +194,15 @@
       var matricula = (o.MATRICULA || "").trim();
       var chave = matricula || (o.ID || "").trim();
       if (!chave) return;
+      // ANTIGUIDADE é opcional (3º critério de desempate do edital 047/2026,
+      // item 8.1.10). Número, menor = mais antigo. Vazia = não desempata.
+      var antiguidade = parseFloat(String(o.ANTIGUIDADE || "").replace(",", "."));
       out[chave] = {
         id: chave,
         nome: (o.NOME_GUERRA || o.NOME || "").trim(),
         matricula: matricula,
-        ativo: candidatoAtivo(o.ATIVO)
+        ativo: candidatoAtivo(o.ATIVO),
+        antiguidade: isFinite(antiguidade) ? antiguidade : null
       };
     });
     return out;
@@ -232,17 +236,32 @@
   /* ---------------- Agregação (coração do modelo) ----------------
      Soma as penalidades de TODOS os avaliadores por candidato e
      junta o tempo. Retorna array de candidatos com .resultado.  */
+  var ultimosDesconhecidos = [];
+
+  // Marcações da planilha que a TABELA_PENALIDADES atual não reconhece,
+  // referentes à última chamada de montarCandidatos(). Lista vazia = tudo
+  // contabilizado. Ver o aviso emitido em iniciarPolling().
+  function penalidadesDesconhecidas() { return ultimosDesconhecidos.slice(); }
+
   function montarCandidatos(candidatos, registros, resultados) {
     candidatos = candidatos || {};
     resultados = resultados || {};
     var contagemPorId = {};
 
+    // Tipos de penalidade que estão em REGISTROS mas não existem mais na
+    // TABELA_PENALIDADES — normalmente porque alguém renomeou uma infração
+    // em js/config.js depois que a prova começou. Não podem sumir da conta
+    // em silêncio: o candidato perderia pontos sem ninguém perceber.
+    var desconhecidos = {};
     (registros || []).forEach(function (r) {
       var id = r.candidatoId || ("_nome:" + r.candidato.toUpperCase());
       var p = CFG.TABELA_PENALIDADES.find(function (x) { return x.nome === r.tipoPenalidade || x.key === r.tipoPenalidade; });
-      if (!p) return;
+      if (!p) { desconhecidos[r.tipoPenalidade] = (desconhecidos[r.tipoPenalidade] || 0) + 1; return; }
       if (!contagemPorId[id]) contagemPorId[id] = {};
       contagemPorId[id][p.key] = (contagemPorId[id][p.key] || 0) + 1;
+    });
+    ultimosDesconhecidos = Object.keys(desconhecidos).map(function (nome) {
+      return { tipoPenalidade: nome, marcacoes: desconhecidos[nome] };
     });
 
     // Base: todos os candidatos cadastrados (mesmo sem marcações)
@@ -251,12 +270,14 @@
     Object.keys(contagemPorId).forEach(function (id) { if (ids.indexOf(id) === -1) ids.push(id); });
 
     return ids.map(function (id) {
-      var c = candidatos[id] || { id: id, nome: id.replace(/^_nome:/, ""), matricula: "", ativo: true };
+      var c = candidatos[id] ||
+        { id: id, nome: id.replace(/^_nome:/, ""), matricula: "", ativo: true, antiguidade: null };
       var contagens = contagemPorId[id] || {};
       var res = resultados[id] || {};
       var r = calcularResultado(res.tempo || "", contagens);
       return {
         id: id, nome: c.nome, matricula: c.matricula, ativo: c.ativo,
+        antiguidade: c.antiguidade === undefined ? null : c.antiguidade,
         tempo: res.tempo || "", contagens: contagens, resultado: r
       };
     });
@@ -280,6 +301,13 @@
             if (ta !== tb) return ta - tb;
           } else if (crt === "penalidades") {
             if (a.resultado.pontosPen !== b.resultado.pontosPen) return a.resultado.pontosPen - b.resultado.pontosPen;
+          } else if (crt === "antiguidade") {
+            // Coluna ANTIGUIDADE (opcional) da aba CANDIDATOS: menor = mais
+            // antigo. Quem não tem o número vai para o fim deste critério —
+            // sem valor cadastrado, o desempate fica com o Chefe.
+            var aa = a.antiguidade === null || a.antiguidade === undefined ? Infinity : a.antiguidade;
+            var ab = b.antiguidade === null || b.antiguidade === undefined ? Infinity : b.antiguidade;
+            if (aa !== ab) return aa - ab;
           }
         }
         return (a.nome || "").localeCompare(b.nome || "");
@@ -343,7 +371,16 @@
           candidatos: candidatos, registros: registros, resultados: resultados,
           agregado: agregado, ranking: classificarRanking(agregado)
         });
-        setStatus("ATUALIZADO ÀS " + horaAgora(), "ok");
+        var orfas = penalidadesDesconhecidas();
+        if (orfas.length) {
+          // Nunca silencioso: marcação na planilha que a tabela atual não
+          // reconhece está fora da nota de alguém.
+          console.warn("[CONDUTORES] Penalidades em REGISTROS fora da TABELA_PENALIDADES:", orfas);
+          setStatus("⚠ " + orfas.reduce(function (s, o) { return s + o.marcacoes; }, 0) +
+            " MARCAÇÃO(ÕES) NÃO RECONHECIDA(S) — VER CONFIGURAÇÕES", "erro");
+        } else {
+          setStatus("ATUALIZADO ÀS " + horaAgora(), "ok");
+        }
       } catch (e) {
         console.warn("[CONDUTORES] Falha na leitura:", e);
         setStatus("FALHA NA LEITURA — " + horaAgora(), "erro");
@@ -538,6 +575,7 @@
     parseCSV: parseCSV, csvParaObjetos: csvParaObjetos,
     parseCandidatos: parseCandidatos, parseRegistros: parseRegistros, parseResultados: parseResultados,
     montarCandidatos: montarCandidatos, classificarRanking: classificarRanking,
+    penalidadesDesconhecidas: penalidadesDesconhecidas,
     setStatus: setStatus, iniciarPolling: iniciarPolling,
     marcarPenalidade: marcarPenalidade, removerPenalidade: removerPenalidade,
     salvarTempo: salvarTempo, salvarCandidato: salvarCandidato, removerCandidato: removerCandidato,

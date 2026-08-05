@@ -16,8 +16,13 @@ de cada candidato é a soma das marcações de todos, tudo auditável na planilh
 
    **CANDIDATOS** (cadastro feito pelo Chefe da Avaliação)
    ```
-   ID | NOME_GUERRA | MATRICULA | ATIVO
+   ID | NOME_GUERRA | MATRICULA | ATIVO | ANTIGUIDADE
    ```
+
+   > `ANTIGUIDADE` é **opcional** e fica sempre na última coluna: número,
+   > **menor = mais antigo**, usado como 3º critério de desempate do edital
+   > (após menor tempo e menos penalidades). Preenchida direto na planilha —
+   > o app só lê, nunca escreve nela. Vazia = o critério não desempata nada.
 
    > **A chave do cadastro é a `MATRICULA`** — a mesma que o app de
    > agendamento ([`painel-de-agendamento`](https://github.com/pfantiniamorim/painel-de-agendamento))
@@ -80,11 +85,22 @@ Este formato (`/gviz/tq`) atualiza em segundos — é o que dá o efeito de
 ## 4. Revisar o `js/config.js`
 
 Além das 4 URLs acima, confira as regras do edital — **tudo fica neste
-arquivo**, nunca no código da lógica:
-`FORMULA_NOTA`, `TABELA_TEMPO` (⚠ **está com valores de exemplo**, ajuste ao
-edital real), `TABELA_PENALIDADES`, `TEMPO_MAXIMO`, `EXERCICIOS`,
-`CRITERIOS_DESEMPATE`, `POLLING_MS` e `PIN_CHEFE` (senha das telas
-administrativas — troque o valor padrão `2026`).
+arquivo**, nunca no código da lógica: `FORMULA_NOTA`, `TABELA_TEMPO`,
+`TABELA_PENALIDADES`, `TEMPO_MAXIMO`, `EXERCICIOS`, `CRITERIOS_DESEMPATE`,
+`POLLING_MS` e `PIN_CHEFE` (senha das telas administrativas — troque o valor
+padrão `2026`).
+
+Estão preenchidos com o **edital nº 047/2026 (3º CECEM/2026)**, item 8, com
+uma exceção: ⚠ **`FORMULA_NOTA` ainda é a do edital anterior** — a fórmula
+da MF não veio no texto transcrito. Conferir no Anexo antes da prova oficial.
+
+> **Nunca renomeie um item de `TABELA_PENALIDADES` com a prova em
+> andamento.** `REGISTROS` guarda o *nome* da infração; renomear faz as
+> marcações já gravadas deixarem de ser reconhecidas. O app não erra em
+> silêncio — o indicador de status mostra
+> "⚠ N MARCAÇÃO(ÕES) NÃO RECONHECIDA(S)" e o console detalha quais —, mas o
+> conserto é restaurar o nome antigo ou corrigir a coluna `TIPO_PENALIDADE`
+> na planilha.
 
 ## 5. Acesso do Chefe da Avaliação (PIN)
 
