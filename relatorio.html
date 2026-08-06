@@ -46,11 +46,6 @@
   .nota .mf strong { font-size: 40px; font-weight: 900; line-height: 1; display: block; margin-top: 4px; }
   .eliminado .mf { background: var(--erro); }
 
-  .assinaturas { display: flex; gap: 10mm; margin-top: 16mm; }
-  .assinaturas div { flex: 1; border-top: 1px solid var(--linha); padding-top: 5px; text-align: center; }
-  .assinaturas p { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; }
-  .assinaturas small { font-size: 8px; font-weight: 700; color: var(--cinza); text-transform: uppercase; letter-spacing: .08em; }
-
   .rodape { margin-top: 10mm; border-top: 1px solid var(--linha); padding-top: 6px;
             font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--cinza); }
   .vazio { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--cinza); padding: 8px 0; }
@@ -73,6 +68,7 @@
 <div class="barra">
   <a href="ranking.html">&larr; Ranking</a>
   <select id="seletor" aria-label="Escolher candidato"></select>
+  <button id="btn-docx" type="button">Baixar .docx (SEI)</button>
   <button id="btn-imprimir" type="button">Imprimir / Salvar PDF</button>
 </div>
 
@@ -82,6 +78,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/docx.js"></script>
 <script>
 (function () {
   var CFG = window.APP_CONFIG;
@@ -90,6 +87,7 @@
   var idAtual = new URLSearchParams(location.search).get('id') || '';
 
   document.getElementById('btn-imprimir').addEventListener('click', function () { window.print(); });
+  document.getElementById('btn-docx').addEventListener('click', baixarDocx);
   document.getElementById('seletor').addEventListener('change', function (e) {
     idAtual = e.target.value;
     history.replaceState(null, '', 'relatorio.html?id=' + encodeURIComponent(idAtual));
@@ -134,9 +132,6 @@
     }
 
     var r = cand.resultado;
-    var posGeral = dados.ranking.indexOf(cand) + 1;
-    var vaga = dados.vagas.porCandidato[cand.id] || null;
-    var posCat = dados.posicoes[cand.id] || null;
 
     /* ---- Cabeçalho ---- */
     var ed = CFG.EDITAL || {};
@@ -155,16 +150,12 @@
       cand.categoria ? nomeCategoria(cand.categoria) : 'NÃO INFORMADA',
       cand.categoria ? '' : 'erro'));
     t1.appendChild(linha('Reserva do GBMOT', cand.gbmot ? 'SIM' : 'NÃO'));
-    if (cand.antiguidade !== null) t1.appendChild(linha('Antiguidade', String(cand.antiguidade)));
 
     /* ---- Execução ---- */
     var t2 = secao(folha, 'Execução do percurso');
     t2.appendChild(linha('Tempo executado', cand.tempo || 'NÃO LANÇADO'));
-    t2.appendChild(linha('Tempo máximo do edital', CFG.TEMPO_MAXIMO));
     t2.appendChild(linha('Pontuação de tempo',
       r.pontuacaoTempo === null ? '—' : n2(r.pontuacaoTempo)));
-    t2.appendChild(linha('Pontuação de condução',
-      r.tempoSeg === null ? '—' : n2(100 - r.pontosPen) + '  (100,00 − ' + n2(r.pontosPen) + ')'));
 
     /* ---- Penalidades: resumo por infração ---- */
     folha.appendChild(el('h2', null, 'Penalidades apuradas'));
@@ -189,36 +180,9 @@
     trTot.appendChild(el('th', null, 'Total descontado'));
     trTot.appendChild(el('th', 'num', ''));
     trTot.appendChild(el('th', 'num', String(totalMarcacoes(cand))));
-    trTot.appendChild(el('th', 'num', '−' + n2(r.pontosPen)));
+    trTot.appendChild(el('th', 'num', (r.pontosPen ? '−' : '') + n2(r.pontosPen)));
     t3.appendChild(trTot);
     folha.appendChild(t3);
-
-    /* ---- Marcações, uma a uma (auditoria) ---- */
-    folha.appendChild(el('h2', null, 'Marcações registradas'));
-    var marcacoes = dados.registros.filter(function (g) { return g.candidatoId === cand.id; });
-    if (!marcacoes.length) {
-      folha.appendChild(el('p', 'vazio', 'Percurso limpo — nenhuma marcação registrada.'));
-    } else {
-      var t4 = el('table');
-      var cab4 = el('tr');
-      ['#', 'Data e hora', 'Infração', 'Pontos', 'Avaliador'].forEach(function (c, i) {
-        cab4.appendChild(el('th', (i === 0 || i === 3) ? 'num' : null, c));
-      });
-      t4.appendChild(cab4);
-      marcacoes.forEach(function (g, i) {
-        var p = CFG.TABELA_PENALIDADES.find(function (x) {
-          return x.nome === g.tipoPenalidade || x.key === g.tipoPenalidade;
-        });
-        var tr = el('tr');
-        tr.appendChild(el('td', 'num', String(i + 1)));
-        tr.appendChild(el('td', null, g.dataHora || '—'));
-        tr.appendChild(el('td', p ? null : 'erro', g.tipoPenalidade + (p ? '' : '  (não consta na tabela do edital)')));
-        tr.appendChild(el('td', 'num', !p ? '?' : (AppUtils.isEliminatoria(p) ? 'ELIM.' : '−' + n2(p.pontos))));
-        tr.appendChild(el('td', null, g.avaliador || '—'));
-        t4.appendChild(tr);
-      });
-      folha.appendChild(t4);
-    }
 
     /* ---- Média final ---- */
     folha.appendChild(el('h2', null, 'Média final (MF)'));
@@ -236,39 +200,77 @@
     nota.appendChild(caixaMf);
     folha.appendChild(nota);
 
-    /* ---- Classificação ---- */
-    var t5 = secao(folha, 'Classificação');
-    t5.appendChild(linha('Situação',
-      r.eliminado ? 'ELIMINADO — ' + r.motivo : (r.mf === null ? 'AGUARDANDO LANÇAMENTO DO TEMPO' : 'CLASSIFICADO'),
-      r.eliminado ? 'erro' : ''));
-    if (!r.eliminado && r.mf !== null) {
-      t5.appendChild(linha('Classificação geral', posGeral + 'º de ' + dados.ranking.length));
-      t5.appendChild(linha('Classificação na destinação',
-        posCat ? posCat.posicao + 'º de ' + posCat.total + ' em ' + nomeCategoria(cand.categoria) : '—'));
-      t5.appendChild(linha('Vaga',
-        vaga ? 'CONTEMPLADO — ' + vaga.nome + ' (' + vaga.posicao + 'ª vaga)' : 'CADASTRO DE RESERVA'));
-    }
-    t5.appendChild(linha('Critérios de desempate',
-      (CFG.CRITERIOS_DESEMPATE || []).map(function (c) {
-        return { tempo: 'menor tempo', penalidades: 'menos penalidades', antiguidade: 'antiguidade militar' }[c] || c;
-      }).join('  →  ')));
-
-    /* ---- Assinaturas ---- */
-    var ass = el('div', 'assinaturas');
-    [['Candidato', cand.nome + (cand.matricula ? ' — Mat. ' + cand.matricula : '')],
-     ['Avaliador de condução', 'Nome, posto/graduação e matrícula'],
-     ['Chefe da avaliação', 'Nome, posto/graduação e matrícula']].forEach(function (a) {
-      var d = el('div');
-      d.appendChild(el('p', null, a[0]));
-      d.appendChild(el('small', null, a[1]));
-      ass.appendChild(d);
-    });
-    folha.appendChild(ass);
-
+    /* Sem campos de assinatura: a assinatura é digital, feita no SEI. */
     folha.appendChild(el('p', 'rodape',
-      'Documento gerado pelo sistema de apuração do TPP em ' + new Date().toLocaleString('pt-BR') +
+      'Documento gerado pelo sistema de apuração do ' + (ed.provaSigla || 'TPP') + ' em ' +
+      new Date().toLocaleString('pt-BR') +
       '. Confere com os registros da comissão. As penalidades são observadas pelos fiscais de exercício, ' +
       'avaliador de condução e avaliador de pista, conforme o edital.'));
+  }
+
+  /* Mesmo conteúdo da folha, em .docx — para colar no editor do SEI.
+     Sem campos de assinatura: a assinatura é digital, feita lá. */
+  function baixarDocx() {
+    var cand = dados && dados.ranking.find(function (c) { return c.id === idAtual; });
+    if (!cand) { alert('Escolha um candidato antes de baixar.'); return; }
+
+    var r = cand.resultado;
+    var ed = CFG.EDITAL || {};
+    var doc = AppDocx.novo();
+
+    doc.titulo('Relatório Individual do ' + (ed.prova || 'Teste Profissional Prático'));
+    doc.subtitulo((ed.unidade || '') + ' — ' + (ed.curso || ''));
+    doc.subtitulo((ed.numero || '') + ' · Local: ' + (ed.local || '') + ' · Viatura: ' + (ed.viatura || ''));
+
+    doc.secao('Identificação do candidato');
+    doc.ficha([
+      ['Nome de guerra', cand.nome || '—'],
+      ['Matrícula', cand.matricula || '—'],
+      ['Destinação da vaga', cand.categoria ? nomeCategoria(cand.categoria) : 'NÃO INFORMADA'],
+      ['Reserva do GBMOT', cand.gbmot ? 'SIM' : 'NÃO']
+    ]);
+
+    doc.secao('Execução do percurso');
+    doc.ficha([
+      ['Tempo executado', cand.tempo || 'NÃO LANÇADO'],
+      ['Pontuação de tempo', r.pontuacaoTempo === null ? '—' : n2(r.pontuacaoTempo)]
+    ]);
+
+    doc.secao('Penalidades apuradas');
+    var linhas = [['Infração', 'Valor unitário', 'Ocorrências', 'Pontos']];
+    CFG.TABELA_PENALIDADES.forEach(function (p) {
+      var qtd = cand.contagens[p.key] || 0;
+      var elimin = AppUtils.isEliminatoria(p);
+      linhas.push([
+        p.nome,
+        elimin ? 'ELIMINATÓRIO' : '−' + n2(p.pontos),
+        String(qtd),
+        !qtd ? '—' : (elimin ? 'ELIMINADO' : '−' + n2(qtd * Number(p.pontos)))
+      ]);
+    });
+    linhas.push(['Total descontado', '', String(totalMarcacoes(cand)),
+      (r.pontosPen ? '−' : '') + n2(r.pontosPen)]);
+    doc.tabela(linhas, { cabecalho: true, total: true, larguras: [46, 20, 16, 18], centradas: [1, 2, 3] });
+
+    doc.secao('Média final (MF)');
+    doc.ficha([
+      ['Fórmula do edital', 'MF = [(PONTUAÇÃO DE TEMPO × 1,75) + (100 − PENALIDADES)] ÷ 2,75'],
+      ['Memorial de cálculo', r.memorial ? memorialLegivel(r.memorial) : '—'],
+      [r.eliminado ? 'Situação' : 'Média final',
+        r.eliminado ? 'ELIMINADO' : (r.mf === null ? '—' : n2(r.mf))]
+    ]);
+
+    doc.espaco();
+    doc.paragrafo(
+      'Documento gerado pelo sistema de apuração do ' + (ed.provaSigla || 'TPP') + ' em ' +
+      new Date().toLocaleString('pt-BR') +
+      '. Confere com os registros da comissão. As penalidades são observadas pelos fiscais de ' +
+      'exercício, avaliador de condução e avaliador de pista, conforme o edital.',
+      { tamanho: 8, cor: '5E5E5E' });
+
+    var nome = String(cand.nome || cand.id).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toUpperCase();
+    AppDocx.baixar(doc, 'TPP-' + (ed.curso || '').replace(/[^\w]/g, '') + '-' + nome + '.docx');
   }
 
   function nomeCategoria(key) {
@@ -296,12 +298,7 @@
 
   AppUtils.iniciarPolling(function (data) {
     if (!data) return;
-    dados = {
-      ranking: data.ranking,
-      registros: data.registros,
-      vagas: AppUtils.distribuirVagas(data.ranking),
-      posicoes: AppUtils.posicoesPorCategoria(data.ranking)
-    };
+    dados = { ranking: data.ranking };
     preencherSeletor();
     render();
   });

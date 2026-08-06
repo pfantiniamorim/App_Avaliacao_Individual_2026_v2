@@ -169,18 +169,52 @@ As heranças são calculadas **antes** da distribuição, de propósito: se
 chegassem depois, alguém do GBMOT ocuparia uma vaga reservada enquanto ainda
 havia vaga herdada na própria graduação.
 
-### 3.3. ✅ Relatório individual imprimível — `relatorio.html`
+### 3.3. ✅ Relatório individual — `relatorio.html`
 
-Comprovante em A4 por candidato, alcançável pelo item **RELATÓRIO** da
-navegação ou pelo botão no memorial de cálculo do ranking. Traz
-identificação e destinação, tempo executado e pontuação de tempo,
-penalidades apuradas por infração, **cada marcação uma a uma** (data/hora,
-infração, pontos e avaliador — direto da aba `REGISTROS`), memorial de
-cálculo da MF, classificação geral e na destinação, vaga contemplada e três
-linhas de assinatura (candidato, avaliador de condução, chefe da avaliação).
+Comprovante A4 por candidato, alcançável pelo item **RELATÓRIO** da navegação
+ou pelo botão no memorial de cálculo do ranking. Enxuto a pedido da Chefia,
+tem só quatro blocos:
 
-Imprime pelo botão "Imprimir / Salvar PDF"; o CSS de impressão já esconde a
-barra de navegação e o indicador de sincronização.
+1. **Identificação** — nome de guerra, matrícula, destinação da vaga e
+   reserva do GBMOT.
+2. **Execução do percurso** — tempo executado e pontuação de tempo.
+3. **Penalidades apuradas** — uma linha por infração, com valor unitário,
+   ocorrências e pontos, mais o total descontado.
+4. **Média final (MF)** — fórmula do edital, memorial de cálculo e a nota
+   (ou `ELIMINADO`, com o motivo no memorial).
+
+**Sem campos de assinatura**: a assinatura é digital, feita no SEI.
+
+Duas saídas, na barra do topo:
+
+- **Imprimir / Salvar PDF** — o CSS de impressão esconde a barra e o
+  indicador de sincronização.
+- **Baixar .docx (SEI)** — gera um `.docx` de verdade no próprio navegador
+  (`js/docx.js`), para abrir no Word e colar no editor do SEI.
+
+### 3.4. `js/docx.js` — gerador de .docx sem dependência
+
+Um `.docx` é um ZIP de XML (OOXML). O arquivo monta o ZIP à mão no modo
+STORE (sem compressão, o único possível sem um compressor) e escreve o
+`word/document.xml`. Sem biblioteca, sem build — cabe no app estático.
+
+**Duas armadilhas do OOXML que estão resolvidas ali, e que voltam a morder
+quem for editar o arquivo:**
+
+- **A ordem dos filhos de `<w:rPr>` e `<w:pPr>` não é livre.** O schema
+  (CT_RPr / CT_PPrBase) fixa a sequência; campo novo entra no lugar certo
+  dela, não no fim.
+- **`<w:tblGrid>` é obrigatório** em toda tabela, logo depois de
+  `<w:tblPr>`.
+
+Nos dois casos o XML fica *bem formado* e mesmo assim inválido, então
+validar com um parser de XML não pega o problema. A conferência que vale é
+abrir o arquivo com um leitor de OOXML de verdade (`python-docx`, Word).
+
+> ⚠ **O LibreOffice desta máquina de desenvolvimento está quebrado** — não
+> abre nem um `.docx` que ele mesmo gera, e responde sempre
+> "Error: source file could not be loaded". Ele **não serve** para validar
+> nada aqui; o erro dele não diz nada sobre o arquivo.
 
 ## Achados do /code-review (2026-07-24) — simplificação e otimização
 

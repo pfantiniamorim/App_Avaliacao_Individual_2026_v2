@@ -11,7 +11,9 @@ infração e horário de cada marcação).
 Além da apuração da Média Final (MF), o app faz a **distribuição das 24 vagas
 do curso** por destinação (QOBM/Comb., QBMG-2, QBMG-3, Externas e a reserva do
 GBMOT), com as redistribuições previstas no edital, e emite um **relatório
-individual imprimível** por candidato, para anexar como comprovante.
+individual** por candidato — em PDF pela impressão ou em **`.docx` para colar
+no SEI**, gerado no próprio navegador por `js/docx.js`, sem dependência
+externa. Sem campos de assinatura: a assinatura é digital, feita no SEI.
 
 **Stack:** HTML/CSS/JS puro (sem build) + Google Sheets (dados) + Google
 Apps Script (API de escrita) + GitHub Pages (hospedagem). Sem dependências
