@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Configurações — Seleção de Condutores CBMDF</title>
+<title>Configurações — TPP 3º CECEM/2026</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -107,6 +107,10 @@ tailwind.config = { theme: { extend: {
     <span class="material-symbols-outlined mb-1">groups</span>
     <span class="text-[10px] font-black uppercase tracking-widest">CANDIDATOS</span>
   </a>
+  <a href="relatorio.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">description</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">RELATÓRIO</span>
+  </a>
   <a href="configuracoes.html" class="flex flex-col items-center justify-center bg-zinc-800 text-white p-2 w-full h-full transition-colors">
     <span class="material-symbols-outlined mb-1">settings</span>
     <span class="text-[10px] font-black uppercase tracking-widest">CONFIG.</span>
@@ -142,7 +146,7 @@ tailwind.config = { theme: { extend: {
       (CFG.TABELA_PENALIDADES || []).map(function (p) {
         return p.nome + ' = ' + (AppUtils.isEliminatoria(p) ? 'ELIMINATÓRIO' : p.pontos);
       }).join('  •  ')));
-    regras.appendChild(bloco('EXERCÍCIOS DO PERCURSO', (CFG.EXERCICIOS || []).join('  •  ')));
+    regras.appendChild(bloco('EXERCÍCIOS DO TPP', (CFG.EXERCICIOS || []).join('  •  ')));
     regras.appendChild(bloco('CRITÉRIOS DE DESEMPATE', (CFG.CRITERIOS_DESEMPATE || []).join(' → ')));
 
     var integ = document.getElementById('painel-integracao');

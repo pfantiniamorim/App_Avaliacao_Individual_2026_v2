@@ -185,6 +185,28 @@
     return v !== "NAO" && v !== "N" && v !== "FALSO" && v !== "FALSE" && v !== "0";
   }
 
+  // Coluna SIM/NÃO em que o padrão (célula vazia) é NÃO — ao contrário de
+  // ATIVO. Usada em GBMOT: quem não marcou não é do GBMOT.
+  function marcadoSim(valor) {
+    var v = String(valor || "").trim().toUpperCase().replace(/Ã/g, "A");
+    return v === "SIM" || v === "S" || v === "VERDADEIRO" || v === "TRUE" || v === "1" || v === "X";
+  }
+
+  // CATEGORIA da planilha → chave de CFG.VAGAS. Tolera acento, espaço,
+  // ponto e barra ("QBMG-2", "qbmg 2", "QOBM/Comb." caem no mesmo lugar).
+  function normalizarCategoria(valor) {
+    var v = String(valor || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!v) return null;
+    var alias = (CFG.ALIAS_CATEGORIA || {})[v];
+    if (alias) return alias;
+    var direto = (CFG.VAGAS || []).find(function (d) {
+      return d.key.replace(/[^A-Z0-9]/g, "") === v;
+    });
+    return direto ? direto.key : null;
+  }
+
   /* A chave do candidato é a MATRICULA — o mesmo identificador que o app de
      agendamento usa, para os dois lerem UM cadastro só. O ID legado só entra
      como reserva, para linha antiga que não tenha matrícula. */
@@ -202,7 +224,13 @@
         nome: (o.NOME_GUERRA || o.NOME || "").trim(),
         matricula: matricula,
         ativo: candidatoAtivo(o.ATIVO),
-        antiguidade: isFinite(antiguidade) ? antiguidade : null
+        antiguidade: isFinite(antiguidade) ? antiguidade : null,
+        // Destinação da vaga (quadro "DISTRIBUIÇÃO DAS VAGAS") e reserva
+        // do GBMOT. Ambas opcionais: sem CATEGORIA o candidato entra no
+        // ranking normalmente, mas não concorre a vaga nenhuma.
+        categoria: normalizarCategoria(o.CATEGORIA),
+        categoriaBruta: (o.CATEGORIA || "").trim(),
+        gbmot: marcadoSim(o.GBMOT)
       };
     });
     return out;
@@ -270,14 +298,18 @@
     Object.keys(contagemPorId).forEach(function (id) { if (ids.indexOf(id) === -1) ids.push(id); });
 
     return ids.map(function (id) {
-      var c = candidatos[id] ||
-        { id: id, nome: id.replace(/^_nome:/, ""), matricula: "", ativo: true, antiguidade: null };
+      var c = candidatos[id] || {
+        id: id, nome: id.replace(/^_nome:/, ""), matricula: "", ativo: true,
+        antiguidade: null, categoria: null, categoriaBruta: "", gbmot: false
+      };
       var contagens = contagemPorId[id] || {};
       var res = resultados[id] || {};
       var r = calcularResultado(res.tempo || "", contagens);
       return {
         id: id, nome: c.nome, matricula: c.matricula, ativo: c.ativo,
         antiguidade: c.antiguidade === undefined ? null : c.antiguidade,
+        categoria: c.categoria || null, categoriaBruta: c.categoriaBruta || "",
+        gbmot: c.gbmot === true,
         tempo: res.tempo || "", contagens: contagens, resultado: r
       };
     });
@@ -312,6 +344,118 @@
         }
         return (a.nome || "").localeCompare(b.nome || "");
       });
+  }
+
+  /* ---------------- Distribuição das vagas do curso ----------------
+     Recebe o ranking JÁ CLASSIFICADO (classificarRanking) e distribui as
+     vagas de CFG.VAGAS na ordem em que estão configuradas.
+
+     Como funciona, em uma frase: cada destinação chama os seus melhores
+     colocados até encher; o que sobrar vai para quem o edital mandou
+     herdar; e repete-se enquanto uma herança criar vaga nova.
+
+     Candidato ELIMINADO nunca ocupa vaga. Candidato sem CATEGORIA
+     reconhecida também não — ele aparece em `semCategoria` para o Chefe
+     corrigir a planilha, em vez de ser encaixado num lugar qualquer.
+
+     Retorna { destinos, semVaga, semCategoria, porCandidato }:
+     - destinos[]     : { key, nome, postos, quantidade, vagas,
+                          classificados[], remanescentes, herdadas }
+     - semVaga[]      : classificados sem vaga (cadastro de reserva)
+     - semCategoria[] : não concorreram por falta de CATEGORIA válida
+     - porCandidato   : id → { destino, nome, posicao } */
+  function distribuirVagas(ranking) {
+    var destinos = (CFG.VAGAS || []).map(function (d) {
+      return {
+        key: d.key, nome: d.nome || d.key, postos: d.postos || "",
+        reserva: d.reserva === true, redistribuiPara: d.redistribuiPara || null,
+        quantidade: Number(d.quantidade) || 0,   // o que o edital previu
+        vagas: Number(d.quantidade) || 0,        // após heranças
+        herdadas: 0, remanescentes: 0, classificados: []
+      };
+    });
+    var porKey = {};
+    destinos.forEach(function (d) { porKey[d.key] = d; });
+
+    var elegiveis = (ranking || []).filter(function (c) {
+      return !c.resultado.eliminado && c.resultado.mf !== null;
+    });
+    var semCategoria = elegiveis.filter(function (c) { return !c.categoria && !c.gbmot; });
+
+    var alocado = {};
+    function disponiveis(destino) {
+      return elegiveis.filter(function (c) {
+        if (alocado[c.id]) return false;
+        return destino.reserva ? c.gbmot === true : c.categoria === destino.key;
+      });
+    }
+
+    /* 1) HERANÇAS PRIMEIRO. Cada candidato tem uma só CATEGORIA, então
+       quanto uma destinação consegue encher depende apenas do próprio
+       grupo — dá para acertar as sobras ANTES de distribuir de fato.
+       Isso é o que garante a promessa da reserva do GBMOT: se a herança
+       chegasse depois, um militar do GBMOT ocuparia uma das 4 reservadas
+       enquanto ainda havia vaga herdada na graduação dele.
+       O laço repete porque uma herança pode cascatear; ninguém devolve
+       vaga, então sempre converge — o teto de voltas é só uma trava
+       contra redistribuição circular mal configurada. */
+    var mudou = true, voltas = 0;
+    while (mudou && voltas < destinos.length + 2) {
+      mudou = false; voltas++;
+      destinos.forEach(function (d) {
+        if (d.reserva) return;
+        var sobra = d.vagas - Math.min(d.vagas, disponiveis(d).length);
+        if (sobra <= 0 || !d.redistribuiPara || !porKey[d.redistribuiPara]) return;
+        porKey[d.redistribuiPara].vagas += sobra;
+        porKey[d.redistribuiPara].herdadas += sobra;
+        d.vagas -= sobra;
+        mudou = true;
+      });
+    }
+
+    // 2) Distribuição, na ordem configurada — a reserva do GBMOT vem por
+    //    último e pega quem já não tiver conseguido vaga na graduação.
+    destinos.forEach(function (d) {
+      disponiveis(d).slice(0, d.vagas).forEach(function (c) {
+        alocado[c.id] = d.key;
+        d.classificados.push(c);
+      });
+    });
+
+    // Sobra sem destino previsto no edital: remanescente, decisão da comissão.
+    destinos.forEach(function (d) { d.remanescentes = d.vagas - d.classificados.length; });
+
+    var porCandidato = {};
+    destinos.forEach(function (d) {
+      d.classificados.forEach(function (c, i) {
+        porCandidato[c.id] = { destino: d.key, nome: d.nome, posicao: i + 1 };
+      });
+    });
+
+    return {
+      destinos: destinos,
+      semVaga: elegiveis.filter(function (c) { return !alocado[c.id]; }),
+      semCategoria: semCategoria,
+      porCandidato: porCandidato
+    };
+  }
+
+  /* Posição de cada candidato dentro da própria CATEGORIA, considerando
+     todos os classificados dela (não só os que pegaram vaga) — é o número
+     que vai no relatório individual. Retorna id → { posicao, total }. */
+  function posicoesPorCategoria(ranking) {
+    var porCategoria = {};
+    (ranking || []).forEach(function (c) {
+      if (!c.categoria || c.resultado.eliminado) return;
+      (porCategoria[c.categoria] = porCategoria[c.categoria] || []).push(c);
+    });
+    var out = {};
+    Object.keys(porCategoria).forEach(function (cat) {
+      porCategoria[cat].forEach(function (c, i) {
+        out[c.id] = { posicao: i + 1, total: porCategoria[cat].length };
+      });
+    });
+    return out;
   }
 
   /* ---------------- Indicador de status ---------------- */
@@ -576,11 +720,14 @@
     parseCandidatos: parseCandidatos, parseRegistros: parseRegistros, parseResultados: parseResultados,
     montarCandidatos: montarCandidatos, classificarRanking: classificarRanking,
     penalidadesDesconhecidas: penalidadesDesconhecidas,
+    candidatoAtivo: candidatoAtivo, marcadoSim: marcadoSim,
+    normalizarCategoria: normalizarCategoria,
+    distribuirVagas: distribuirVagas, posicoesPorCategoria: posicoesPorCategoria,
     setStatus: setStatus, iniciarPolling: iniciarPolling,
     marcarPenalidade: marcarPenalidade, removerPenalidade: removerPenalidade,
     salvarTempo: salvarTempo, salvarCandidato: salvarCandidato, removerCandidato: removerCandidato,
     reenviarPendentes: reenviarPendentes, lerFila: lerFila,
-    el: el, candidatoAtivo: candidatoAtivo,
+    el: el,
     pedirPin: pedirPin, sairChefe: sairChefe
   };
 })();

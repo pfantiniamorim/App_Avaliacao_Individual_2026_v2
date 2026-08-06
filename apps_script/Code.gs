@@ -24,11 +24,14 @@
    - "removerCandidato"  → remove candidato de CANDIDATOS
    ========================================================= */
 
-// ANTIGUIDADE é opcional e fica na 5ª coluna, DEPOIS de ATIVO — o app só a
-// lê (3º critério de desempate do edital), nunca escreve nela: salvarCandidato
-// grava apenas as 4 primeiras colunas, então o valor digitado ali é preservado.
+// ANTIGUIDADE, CATEGORIA e GBMOT ficam DEPOIS de ATIVO e são preenchidas
+// direto na planilha — o app só as LÊ, nunca escreve nelas: salvarCandidato
+// grava apenas as 4 primeiras colunas, então o que estiver ali é preservado.
+//   ANTIGUIDADE : número, menor = mais antigo (3º desempate)
+//   CATEGORIA   : QOBM | QBMG-2 | QBMG-3 | EXTERNA (destinação da vaga)
+//   GBMOT       : SIM para quem disputa as 4 vagas reservadas ao GBMOT
 var ABAS = {
-  CANDIDATOS: ['ID', 'NOME_GUERRA', 'MATRICULA', 'ATIVO', 'ANTIGUIDADE'],
+  CANDIDATOS: ['ID', 'NOME_GUERRA', 'MATRICULA', 'ATIVO', 'ANTIGUIDADE', 'CATEGORIA', 'GBMOT'],
   REGISTROS:  ['TS', 'DATA_HORA', 'AVALIADOR', 'CANDIDATO_ID', 'CANDIDATO', 'TIPO_PENALIDADE', 'PONTOS'],
   RESULTADOS: ['CANDIDATO_ID', 'TEMPO', 'STATUS']
 };

@@ -16,13 +16,20 @@ de cada candidato é a soma das marcações de todos, tudo auditável na planilh
 
    **CANDIDATOS** (cadastro feito pelo Chefe da Avaliação)
    ```
-   ID | NOME_GUERRA | MATRICULA | ATIVO | ANTIGUIDADE
+   ID | NOME_GUERRA | MATRICULA | ATIVO | ANTIGUIDADE | CATEGORIA | GBMOT
    ```
 
-   > `ANTIGUIDADE` é **opcional** e fica sempre na última coluna: número,
-   > **menor = mais antigo**, usado como 3º critério de desempate do edital
-   > (após menor tempo e menos penalidades). Preenchida direto na planilha —
-   > o app só lê, nunca escreve nela. Vazia = o critério não desempata nada.
+   > As **três últimas colunas** são preenchidas direto na planilha e o app
+   > só as **lê** — `salvarCandidato` grava apenas as 4 primeiras, então
+   > nada do que você digitar ali é sobrescrito. Todas ficam depois de
+   > `ATIVO`, então acrescentá-las não desloca coluna nenhuma e não afeta o
+   > app de agendamento (que lê pelo nome da coluna).
+   >
+   > | Coluna | Para quê |
+   > |---|---|
+   > | `ANTIGUIDADE` | Número, **menor = mais antigo**. 3º critério de desempate do edital (após menor tempo e menos penalidades). Vazia = não desempata nada |
+   > | `CATEGORIA` | Destinação da vaga: `QOBM`, `QBMG-2`, `QBMG-3` ou `EXTERNA`. Aceita variações de grafia (`qbmg 2`, `QOBM/Comb.`, `Externo`). **Sem ela o candidato entra no ranking mas não concorre a vaga** — a tela de classificação avisa quem está nessa situação |
+   > | `GBMOT` | `SIM` para quem disputa as 4 vagas reservadas ao GBMOT. Vazia = não |
 
    > **A chave do cadastro é a `MATRICULA`** — a mesma que o app de
    > agendamento ([`painel-de-agendamento`](https://github.com/pfantiniamorim/painel-de-agendamento))

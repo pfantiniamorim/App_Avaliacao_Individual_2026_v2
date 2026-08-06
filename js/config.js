@@ -41,21 +41,33 @@ window.APP_CONFIG = {
      Fonte: EDITAL Nº 047/2026-CBMDF/DIREN/SEITC — 3º CECEM/2026,
      item 8 (Teste Profissional Prático). Transcrito em 05/08/2026. */
 
-  /* ⚠ PENDENTE DE CONFERÊNCIA — a fórmula da MF não veio no trecho do
-     edital transcrito ("A média final (MF) será determinada da seguinte
-     forma:" e a fórmula em si, provavelmente uma imagem). A de baixo é a
-     que já estava aqui, do edital anterior: média ponderada da pontuação
-     de tempo (peso 1,75) com a de condução (peso 1,00), onde a de condução
-     é 100 menos as penalidades — coerente com "o candidato iniciará com
-     100 pontos, sendo descontados os pontos das infrações" (item 8.2.1).
-     CONFERIR contra o Anexo do edital antes da prova oficial.
+  /* Identificação do certame. Alimenta os títulos das telas e o
+     cabeçalho do relatório individual — a nomenclatura do edital fica
+     num lugar só, e um certame novo se resolve editando este bloco. */
+  EDITAL: {
+    numero: "Edital nº 047/2026-CBMDF/DIREN/SEITC",
+    curso: "3º CECEM/2026",
+    cursoExtenso: "3º Curso de Especialização para Condutores de Veículos de Emergência",
+    prova: "Teste Profissional Prático",
+    provaSigla: "TPP",
+    unidade: "CBMDF · DIREN · GBMOT",
+    local: "15º GBM",
+    viatura: "Sprinter MB 415 CDI short ou similar",
+    uniforme: "3º A"
+  },
+
+  /* Fórmula da Média Final (MF), confirmada pela Chefia da Avaliação:
+         MF = [(PONTUACAO_TEMPO × 1,75) + (100 − PENALIDADES)] ÷ 2,75
+     Média ponderada da pontuação de tempo (peso 1,75) com a pontuação de
+     condução (peso 1,00), sendo a de condução 100 menos os pontos das
+     infrações — item 8.2.1: "o candidato iniciará o TPP com 100 pontos,
+     sendo descontados os pontos correspondentes às infrações cometidas".
      Variáveis disponíveis: PONTUACAO_TEMPO, PENALIDADES */
   FORMULA_NOTA: "(PONTUACAO_TEMPO * 1.75 + 100 - PENALIDADES) / 2.75",
 
-  /* Tempo máximo do percurso — acima disso o candidato é ELIMINADO.
-     "O tempo máximo para execução do TPP será de 04:05:00". (O rodapé da
-     tabela diz "> 04:06:00 ELIMINADO", mas não há pontuação para 04:06 e
-     o texto do item é explícito — vale 04:05.) */
+  /* Tempo máximo do TPP. Até 04:05 o candidato pontua (04:05 = 10,00);
+     ao atingir 04:06 é ELIMINADO. Centésimos de segundo são
+     desconsiderados — o tempo é lançado em MM:SS. */
   TEMPO_MAXIMO: "04:05",
 
   /* Base tempo → pontuação (item 8.2, "DO TEMPO"). Vale a PRIMEIRA faixa
@@ -117,6 +129,42 @@ window.APP_CONFIG = {
      (número; menor = mais antigo). Coluna vazia = critério não desempata
      nada, e a decisão fica com o Chefe da Avaliação. */
   CRITERIOS_DESEMPATE: ["tempo", "penalidades", "antiguidade"],
+
+  /* ========== DISTRIBUIÇÃO DAS VAGAS DO CURSO (24 no total) ==========
+     Quadro "DISTRIBUIÇÃO DAS VAGAS" do edital. Cada candidato traz sua
+     destinação na coluna CATEGORIA da aba CANDIDATOS (QOBM, QBMG-2,
+     QBMG-3 ou EXTERNA) e, se for do GBMOT, SIM na coluna GBMOT.
+
+     A ORDEM desta lista é a ordem de preenchimento. O GBMOT vem por
+     último de propósito: o militar do GBMOT concorre primeiro na vaga da
+     própria graduação e, se não entrar lá, ainda disputa uma das 4
+     reservadas — assim a reserva nunca prejudica quem ela existe para
+     proteger. Para inverter (GBMOT disputa primeiro as 4 reservadas),
+     basta mover a linha do GBMOT para o topo desta lista.
+
+     redistribuiPara: destino que herda as vagas não preenchidas, conforme
+     "REDISTRIBUIÇÃO DE VAGAS". O edital só manda redistribuir QOBM e
+     Externas, ambas para QBMG-2 — e proíbe vaga do CBMDF ir para o
+     público externo. Sobra de QBMG-3 ou do GBMOT o edital não trata: fica
+     como VAGA REMANESCENTE, para decisão da comissão, em vez de o app
+     inventar uma regra que o edital não escreveu.
+
+     reserva: true = preenchida pela coluna GBMOT, não pela CATEGORIA. */
+  VAGAS: [
+    { key: "QOBM",    nome: "QOBM/Comb.", postos: "Maj, Cap, Ten",  quantidade: 2,  redistribuiPara: "QBMG-2" },
+    { key: "QBMG-2",  nome: "QBMG-2",     postos: "Sd/1 à Sub Ten", quantidade: 14, redistribuiPara: null },
+    { key: "QBMG-3",  nome: "QBMG-3",     postos: "Sd/1 à Sub Ten", quantidade: 2,  redistribuiPara: null },
+    { key: "EXTERNA", nome: "Externas",   postos: "Todos",          quantidade: 2,  redistribuiPara: "QBMG-2" },
+    { key: "GBMOT",   nome: "GBMOT",      postos: "—",              quantidade: 4,  redistribuiPara: null, reserva: true }
+  ],
+
+  /* Grafias aceitas na coluna CATEGORIA da planilha → chave em VAGAS.
+     A comparação ignora maiúsculas, acentos, espaços e pontuação. */
+  ALIAS_CATEGORIA: {
+    "QOBM": "QOBM", "QOBMCOMB": "QOBM", "QOBMCOMBATENTE": "QOBM", "OFICIAL": "QOBM",
+    "QBMG2": "QBMG-2", "QBMG3": "QBMG-3",
+    "EXTERNA": "EXTERNA", "EXTERNO": "EXTERNA", "EXTERNAS": "EXTERNA"
+  },
 
   /* ================= ACESSO =================
      PIN das telas do Chefe da Avaliação (cadastro de candidatos,

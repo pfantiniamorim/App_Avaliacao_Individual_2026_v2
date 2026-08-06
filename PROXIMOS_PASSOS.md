@@ -142,17 +142,45 @@ ela no `participantes.html`, e o app **nunca escreve** nessa coluna:
 não afeta o app de agendamento, que lê pelo nome da coluna. Coluna vazia = o
 critério não desempata nada e a decisão fica com o Chefe.
 
-### 3.2. ⚠ Vagas por categoria não estão modeladas no ranking
+### 3.2. ✅ Vagas por categoria — implementado
 
-O edital distribui as **24 vagas do curso** por categoria — 2 QOBM/Comb.
-(até Major), 14 QBMG-2, 2 QBMG-3, 4 GBMOT e 2 externas — com regras de
-redistribuição entre elas. O `ranking.html` produz **uma lista única** por
-MF, sem separar por categoria: serve para apurar a nota e a ordem, mas **não
-decide sozinho quem ocupa qual vaga**.
+O quadro "DISTRIBUIÇÃO DAS VAGAS" virou `CFG.VAGAS` em `js/config.js`
+(QOBM 2 · QBMG-2 14 · QBMG-3 2 · Externas 2 · GBMOT 4 = 24) e
+`AppUtils.distribuirVagas()` faz a apuração. A tela de classificação
+(`ranking.html`) mostra, por destinação, quem ficou com cada vaga.
 
-Para o app fazer esse corte seria preciso uma coluna de categoria em
-`CANDIDATOS` e um agrupamento no ranking. Decisão em aberto — hoje a
-classificação por categoria é feita à mão sobre a lista que o app gera.
+Como funciona: cada destinação chama os seus melhores colocados até encher;
+o que sobrar vai para quem o edital mandou herdar; e repete enquanto uma
+herança criar vaga nova.
+
+**Duas decisões que o edital não fecha, tomadas assim e configuráveis:**
+
+1. **GBMOT preenche por último.** O militar do GBMOT concorre primeiro na
+   vaga da própria graduação e, só se não entrar lá, disputa uma das 4
+   reservadas — assim a reserva nunca prejudica quem ela existe para
+   proteger. Para inverter, mova a linha do GBMOT para o topo de
+   `CFG.VAGAS`.
+2. **Sobra de QBMG-3 e do GBMOT não é redistribuída.** O edital só manda
+   redistribuir QOBM e Externas, ambas para QBMG-2. As outras aparecem como
+   vaga não preenchida, para decisão da comissão, em vez de o app inventar
+   regra. Para mudar, preencha `redistribuiPara` na destinação.
+
+As heranças são calculadas **antes** da distribuição, de propósito: se
+chegassem depois, alguém do GBMOT ocuparia uma vaga reservada enquanto ainda
+havia vaga herdada na própria graduação.
+
+### 3.3. ✅ Relatório individual imprimível — `relatorio.html`
+
+Comprovante em A4 por candidato, alcançável pelo item **RELATÓRIO** da
+navegação ou pelo botão no memorial de cálculo do ranking. Traz
+identificação e destinação, tempo executado e pontuação de tempo,
+penalidades apuradas por infração, **cada marcação uma a uma** (data/hora,
+infração, pontos e avaliador — direto da aba `REGISTROS`), memorial de
+cálculo da MF, classificação geral e na destinação, vaga contemplada e três
+linhas de assinatura (candidato, avaliador de condução, chefe da avaliação).
+
+Imprime pelo botão "Imprimir / Salvar PDF"; o CSS de impressão já esconde a
+barra de navegação e o indicador de sincronização.
 
 ## Achados do /code-review (2026-07-24) — simplificação e otimização
 
