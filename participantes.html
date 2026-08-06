@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Cadastro de Candidatos — Seleção de Condutores CBMDF</title>
+<title>Cadastro de Candidatos — TPP 3º CECEM/2026</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -90,6 +90,10 @@ tailwind.config = { theme: { extend: {
   <a href="participantes.html" class="flex flex-col items-center justify-center bg-zinc-800 text-white p-2 w-full h-full transition-colors">
     <span class="material-symbols-outlined mb-1">groups</span>
     <span class="text-[10px] font-black uppercase tracking-widest">CANDIDATOS</span>
+  </a>
+  <a href="relatorio.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
+    <span class="material-symbols-outlined mb-1">description</span>
+    <span class="text-[10px] font-black uppercase tracking-widest">RELATÓRIO</span>
   </a>
   <a href="configuracoes.html" class="flex flex-col items-center justify-center text-zinc-500 p-2 w-full h-full hover:bg-zinc-900 transition-colors">
     <span class="material-symbols-outlined mb-1">settings</span>
@@ -203,10 +207,15 @@ tailwind.config = { theme: { extend: {
     var matricula = document.getElementById('novo-matricula').value.trim();
     if (!nome || !matricula) return;
 
+    // A matrícula É a chave do cadastro (a mesma que o app de agendamento usa),
+    // então repetir não cria um segundo candidato — sobrescreveria o existente.
     var dup = Object.values(candidatosAtuais).some(function (c) { return (c.matricula || '') === matricula; });
-    if (dup && !confirm('Já existe um candidato com a matrícula ' + matricula + '. Adicionar mesmo assim?')) return;
+    if (dup) {
+      alert('Já existe um candidato com a matrícula ' + matricula + '. Edite a linha dele na lista abaixo.');
+      return;
+    }
 
-    await salvar({ id: AppUtils.idCurto(), nome: nome, matricula: matricula, ativo: true });
+    await salvar({ id: matricula, nome: nome, matricula: matricula, ativo: true });
     document.getElementById('novo-nome').value = '';
     document.getElementById('novo-matricula').value = '';
     document.getElementById('novo-nome').focus();

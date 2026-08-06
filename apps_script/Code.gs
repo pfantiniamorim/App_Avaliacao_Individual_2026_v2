@@ -8,6 +8,10 @@
 
    3 abas (criadas automaticamente se não existirem):
    - CANDIDATOS : ID | NOME_GUERRA | MATRICULA | ATIVO
+                  ⚠ A chave do cadastro é a MATRICULA — a mesma que o app
+                  de agendamento usa, para os dois lerem UM cadastro só.
+                  A coluna ID é mantida por compatibilidade e recebe a
+                  própria matrícula a cada gravação.
    - REGISTROS  : TS | DATA_HORA | AVALIADOR | CANDIDATO_ID |
                   CANDIDATO | TIPO_PENALIDADE | PONTOS   (append-only, auditável)
    - RESULTADOS : CANDIDATO_ID | TEMPO | STATUS          (1 linha por candidato)
@@ -20,15 +24,26 @@
    - "removerCandidato"  → remove candidato de CANDIDATOS
    ========================================================= */
 
+// ANTIGUIDADE, CATEGORIA e GBMOT ficam DEPOIS de ATIVO e são preenchidas
+// direto na planilha — o app só as LÊ, nunca escreve nelas: salvarCandidato
+// grava apenas as 4 primeiras colunas, então o que estiver ali é preservado.
+//   ANTIGUIDADE : número, menor = mais antigo (3º desempate)
+//   CATEGORIA   : QOBM | QBMG-2 | QBMG-3 | EXTERNA (destinação da vaga)
+//   GBMOT       : SIM para quem disputa as 4 vagas reservadas ao GBMOT
 var ABAS = {
-  CANDIDATOS: ['ID', 'NOME_GUERRA', 'MATRICULA', 'ATIVO'],
+  CANDIDATOS: ['ID', 'NOME_GUERRA', 'MATRICULA', 'ATIVO', 'ANTIGUIDADE', 'CATEGORIA', 'GBMOT'],
   REGISTROS:  ['TS', 'DATA_HORA', 'AVALIADOR', 'CANDIDATO_ID', 'CANDIDATO', 'TIPO_PENALIDADE', 'PONTOS'],
   RESULTADOS: ['CANDIDATO_ID', 'TEMPO', 'STATUS']
 };
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  lock.tryLock(15000);
+  // Sem conferir o retorno, uma disputa entre avaliadores deixaria
+  // ler-e-escrever rodando sem proteção — melhor recusar e pedir de novo
+  // (o app já tem fila offline e reenvia sozinho).
+  if (!lock.tryLock(15000)) {
+    return responder({ ok: false, erro: 'Servidor ocupado, tente de novo em instantes.' });
+  }
   try {
     var dados = JSON.parse(e.postData.contents);
     var tipo = String(dados.tipo || '');
@@ -77,22 +92,42 @@ function gravarTempo(d) {
   return { ok: true, criado: String(d.candidatoId) };
 }
 
+/* A chave do cadastro é a MATRICULA — a mesma que o app de agendamento usa.
+   Casar também pelo ID cobre as linhas antigas, cadastradas quando a chave
+   era um código gerado (ex.: "c72647690"); ao salvar, a coluna ID recebe a
+   matrícula e a linha converge para a chave única, sem duplicar. */
+function localizarCandidato(valores, id, matricula) {
+  for (var i = 1; i < valores.length; i++) {
+    var idLinha = String(valores[i][0]).trim();
+    var matLinha = String(valores[i][2]).trim();
+    if (matricula && matLinha === String(matricula).trim()) return i;
+    if (id && idLinha && idLinha === String(id).trim()) return i;
+  }
+  return -1;
+}
+
 function salvarCandidato(d) {
   var aba = obterAba('CANDIDATOS');
   var valores = aba.getDataRange().getValues();
   var linha = [String(d.id), d.nomeGuerra || '', d.matricula || '', d.ativo === false ? 'NAO' : 'SIM'];
-  for (var i = 1; i < valores.length; i++) {
-    if (String(valores[i][0]) === String(d.id)) {
-      aba.getRange(i + 1, 1, 1, linha.length).setValues([linha]);
-      return { ok: true, atualizado: String(d.id) };
-    }
+  var i = localizarCandidato(valores, d.id, d.matricula);
+  if (i >= 0) {
+    aba.getRange(i + 1, 1, 1, linha.length).setValues([linha]);
+    return { ok: true, atualizado: String(d.id) };
   }
   aba.appendRow(linha);
   return { ok: true, criado: String(d.id) };
 }
 
 function removerCandidato(id) {
-  return removerPorColuna('CANDIDATOS', 1, id);
+  var aba = obterAba('CANDIDATOS');
+  var valores = aba.getDataRange().getValues();
+  // O app manda a matrícula como id; procurar nas duas colunas cobre
+  // também as linhas antigas que ainda tenham um ID gerado.
+  var i = localizarCandidato(valores, id, id);
+  if (i < 0) return { ok: true, removido: null, aviso: 'não encontrado' };
+  aba.deleteRow(i + 1);
+  return { ok: true, removido: String(id) };
 }
 
 /* ---------------- Utilidades ---------------- */

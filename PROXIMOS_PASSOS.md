@@ -1,6 +1,24 @@
 # Próximos Passos — Teste de Seleção de Condutores
 
-Backlog técnico para retomar em sessões futuras. Atualizado em 2026-07-24.
+Backlog técnico para retomar em sessões futuras. Atualizado em 2026-08-05.
+
+## 2026-08-05 — Sincronização com o app de agendamento (3º CECEM/2026)
+
+O edital nº 047/2026-CBMDF/DIREN/SEITC foi publicado e a planilha
+`Selecao_Condutores_2026` passou a ser compartilhada com o
+[`painel-de-agendamento`](https://github.com/pfantiniamorim/painel-de-agendamento).
+Diagnóstico e correções desta sessão:
+
+| Achado | Situação |
+|---|---|
+| **Escrita do app quebrada**: os dois apps apontavam para a MESMA URL `/exec`. Como a planilha só admite um script vinculado, colar o `Code.gs` do agendamento por cima apagou o `doPost` daqui — penalidade, tempo e cadastro respondiam `ACAO_INVALIDA` | ✅ Resolvido: o script vinculado volta a ser **exclusivo deste app**; o agendamento virou projeto independente com implantação própria. `ENDPOINT_APPS_SCRIPT` não mudou |
+| **Cadastro duplo**: este app chaveava por `ID`, o agendamento por `MATRICULA`, e 54 dos 56 candidatos estavam sem `ID` — o app enxergava só 2 pessoas | ✅ Resolvido: a chave passou a ser a `MATRICULA` (`parseCandidatos`), com o `ID` legado como reserva. Os 56 aparecem nos dois apps |
+| `ATIVO = "NÃO"` (com til) não desativava aqui, mas desativava no agendamento | ✅ Resolvido: `AppUtils.candidatoAtivo()` normaliza o acento |
+| Pontuação ainda com valores de exemplo | 🔶 Pendente do PDF do edital (ver item 3 abaixo) |
+
+**Reimplantar é obrigatório** depois de colar o `apps_script/Code.gs` novo:
+Implantar → Gerenciar implantações → ✏️ → Versão: **Nova versão** → Implantar.
+Sem isso a URL continua servindo o código antigo.
 
 ## Estado atual (o que já está pronto e publicado)
 
@@ -80,14 +98,89 @@ volta da planilha.
   Auditoria" do `dashboard.html`, chamando a mesma `removerPenalidade(ts)`
   com confirmação — tela já protegida por PIN.
 
-### 3. Valores de exemplo a substituir pelo edital real
+### 3. ✅ Valores do edital 047/2026 transcritos — resta a fórmula da MF
 
-- `TABELA_TEMPO` em `js/config.js` está com faixas de exemplo (100→02:30,
-  90→02:45 …). Substituir pelos valores reais do edital antes de uma prova
-  oficial.
-- `TABELA_PENALIDADES` (toque=3, derrubada=10, apagar viatura=10,
-  desvio=100, segurança=ELIMINATÓRIO) — conferir se batem com o edital
-  vigente; pode mudar de teste para teste.
+Transcrito em 05/08/2026 para `js/config.js`, a partir do item 8 do
+**edital nº 047/2026-CBMDF/DIREN/SEITC (3º CECEM/2026)**:
+
+- `TABELA_TEMPO` — **96 faixas**, segundo a segundo, do quadro "DO TEMPO":
+  02:30 = 100,00 … 04:05 = 10,00.
+- `TEMPO_MAXIMO` = **04:05** ("o tempo máximo para execução do TPP será de
+  04:05:00"). O rodapé do quadro diz "> 04:06:00 ELIMINADO", mas não há
+  pontuação para 04:06 — prevalece o texto do item.
+- `TABELA_PENALIDADES` — toque em cone/balizador 3, derrubada 10,
+  interromper o motor 10, desvio/erro de percurso 100, atentar contra a
+  segurança ELIMINATÓRIO.
+- `EXERCICIOS` — os 7 do item 8.1.1 (slalom de alta, baliza, slalom de
+  baixa, corredor "N", marcha ré, garagem balizada, "oito").
+- `CRITERIOS_DESEMPATE` — menor tempo → menos penalidades → **antiguidade
+  militar** (o edital reintroduziu o 3º critério).
+
+**⚠ Falta a fórmula da MF.** O trecho recebido tem "A média final (MF) será
+determinada da seguinte forma:" e emenda no quadro do tempo — a fórmula em
+si não veio (provavelmente é uma imagem no PDF). `FORMULA_NOTA` continua com
+a do edital anterior,
+`(PONTUACAO_TEMPO * 1.75 + 100 - PENALIDADES) / 2.75`, que é coerente com o
+item 8.2.1 ("o candidato iniciará com 100 pontos, sendo descontados os
+pontos das infrações") mas **precisa ser conferida no Anexo antes da prova
+oficial**.
+
+Conferir também, sem alterar por conta própria: as **datas da seletiva** na
+aba `Faixas` da planilha (hoje 10–13/08/2026, enquanto o curso está previsto
+para 28/09–28/10/2026) e as **60 vagas de agendamento** (4/4/4/3 por faixa)
+contra os 56 convocados cadastrados.
+
+### 3.1. Coluna `ANTIGUIDADE` (opcional) — 3º critério de desempate
+
+O edital exige antiguidade militar como último desempate. O app lê uma
+coluna **`ANTIGUIDADE`** na aba `CANDIDATOS`, número, **menor = mais
+antigo** — a ser preenchida direto na planilha pelo Chefe (não há campo para
+ela no `participantes.html`, e o app **nunca escreve** nessa coluna:
+`salvarCandidato` grava só as 4 primeiras).
+
+É a **5ª coluna**, depois de `ATIVO` — acrescentar no fim não desloca nada e
+não afeta o app de agendamento, que lê pelo nome da coluna. Coluna vazia = o
+critério não desempata nada e a decisão fica com o Chefe.
+
+### 3.2. ✅ Vagas por categoria — implementado
+
+O quadro "DISTRIBUIÇÃO DAS VAGAS" virou `CFG.VAGAS` em `js/config.js`
+(QOBM 2 · QBMG-2 14 · QBMG-3 2 · Externas 2 · GBMOT 4 = 24) e
+`AppUtils.distribuirVagas()` faz a apuração. A tela de classificação
+(`ranking.html`) mostra, por destinação, quem ficou com cada vaga.
+
+Como funciona: cada destinação chama os seus melhores colocados até encher;
+o que sobrar vai para quem o edital mandou herdar; e repete enquanto uma
+herança criar vaga nova.
+
+**Duas decisões que o edital não fecha, tomadas assim e configuráveis:**
+
+1. **GBMOT preenche por último.** O militar do GBMOT concorre primeiro na
+   vaga da própria graduação e, só se não entrar lá, disputa uma das 4
+   reservadas — assim a reserva nunca prejudica quem ela existe para
+   proteger. Para inverter, mova a linha do GBMOT para o topo de
+   `CFG.VAGAS`.
+2. **Sobra de QBMG-3 e do GBMOT não é redistribuída.** O edital só manda
+   redistribuir QOBM e Externas, ambas para QBMG-2. As outras aparecem como
+   vaga não preenchida, para decisão da comissão, em vez de o app inventar
+   regra. Para mudar, preencha `redistribuiPara` na destinação.
+
+As heranças são calculadas **antes** da distribuição, de propósito: se
+chegassem depois, alguém do GBMOT ocuparia uma vaga reservada enquanto ainda
+havia vaga herdada na própria graduação.
+
+### 3.3. ✅ Relatório individual imprimível — `relatorio.html`
+
+Comprovante em A4 por candidato, alcançável pelo item **RELATÓRIO** da
+navegação ou pelo botão no memorial de cálculo do ranking. Traz
+identificação e destinação, tempo executado e pontuação de tempo,
+penalidades apuradas por infração, **cada marcação uma a uma** (data/hora,
+infração, pontos e avaliador — direto da aba `REGISTROS`), memorial de
+cálculo da MF, classificação geral e na destinação, vaga contemplada e três
+linhas de assinatura (candidato, avaliador de condução, chefe da avaliação).
+
+Imprime pelo botão "Imprimir / Salvar PDF"; o CSS de impressão já esconde a
+barra de navegação e o indicador de sincronização.
 
 ## Achados do /code-review (2026-07-24) — simplificação e otimização
 
@@ -98,12 +191,12 @@ ordenados do mais para o menos importante.
 
 ### Risco real (corrigir antes do próximo teste com muitos avaliadores)
 
-1. **`apps_script/Code.gs:31`** — `doPost()` chama `lock.tryLock(15000)` mas
-   nunca confere o retorno booleano. Se o lock falhar sob disputa (vários
-   avaliadores marcando ao mesmo tempo), a leitura-e-escrita de
-   `gravarTempo`/`salvarCandidato`/`removerPorColuna` roda sem proteção real e
-   pode corromper/sobrescrever um registro. **Fix:** se `tryLock` retornar
-   `false`, responder erro pedindo para tentar de novo, em vez de prosseguir.
+1. ✅ **RESOLVIDO em 2026-08-05** — **`apps_script/Code.gs`** `doPost()` chamava
+   `lock.tryLock(15000)` sem conferir o retorno booleano. Se o lock falhasse sob
+   disputa (vários avaliadores marcando ao mesmo tempo), a leitura-e-escrita de
+   `gravarTempo`/`salvarCandidato`/`removerPorColuna` rodava sem proteção real e
+   podia corromper/sobrescrever um registro. Agora responde
+   "Servidor ocupado, tente de novo em instantes." e o app reenvia pela fila.
 2. **`js/utils.js:342`** (`iniciarPolling`) — o `setInterval` não trava contra
    execução sobreposta, e `reenviarPendentes()` é chamado sem `await`. Em
    conexão lenta, dois ciclos podem ler e reenviar a mesma fila offline,
@@ -114,12 +207,10 @@ ordenados do mais para o menos importante.
 
 ### Código morto
 
-3. **`js/utils.js:270`** — o critério de desempate `"antiguidade"` em
-   `classificarRanking()` compara um campo que não existe mais em lugar
-   nenhum (removido do cadastro por pedido da usuária). Hoje é inofensivo
-   porque `CRITERIOS_DESEMPATE` padrão não o inclui, mas fica "morto e
-   armadilhado" — se alguém adicionar de volta, falha silenciosamente.
-   **Fix:** remover o ramo `else if (crt === "antiguidade")` inteiro.
+3. ✅ **RESOLVIDO em 2026-08-05** — **`js/utils.js`** o critério de desempate
+   `"antiguidade"` em `classificarRanking()` comparava um campo que não existe
+   mais em lugar nenhum. Ramo removido. Também saiu `idCurto()`, que perdeu o
+   último uso quando a matrícula virou a chave do cadastro.
 
 ### Duplicação (manutenção)
 
@@ -130,9 +221,9 @@ ordenados do mais para o menos importante.
    (`algumTempoEmFoco`) e `participantes.html:110` (`algumCampoEmFoco`)
    reimplementam a mesma checagem via `document.activeElement`. **Fix:**
    `AppUtils.algumCampoComClasseEmFoco(classe)` genérico em `js/utils.js`.
-6. **ID da planilha repetido 3x** — `js/config.js:26-28` colam o mesmo ID em
-   três URLs, contradizendo o comentário que diz bastar trocar "o ID".
-   **Fix:** uma constante `SHEET_ID` e as 3 URLs montadas por template string.
+6. ✅ **RESOLVIDO em 2026-08-05** — **ID da planilha repetido 3x** em
+   `js/config.js`, contradizendo o comentário que dizia bastar trocar "o ID".
+   Agora há uma constante `SHEET_ID` e as 3 URLs são montadas a partir dela.
 
 ### Eficiência (baixo impacto, fácil de aplicar)
 
