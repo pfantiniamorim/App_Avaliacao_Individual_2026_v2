@@ -125,10 +125,10 @@ item 8.2.1 ("o candidato iniciará com 100 pontos, sendo descontados os
 pontos das infrações") mas **precisa ser conferida no Anexo antes da prova
 oficial**.
 
-Conferir também, sem alterar por conta própria: as **datas da seletiva** na
-aba `Faixas` da planilha (hoje 10–13/08/2026, enquanto o curso está previsto
-para 28/09–28/10/2026) e as **60 vagas de agendamento** (4/4/4/3 por faixa)
-contra os 56 convocados cadastrados.
+Datas da seletiva na aba `Faixas` da planilha: **11 a 14/08/2026** (terça a
+sexta), atualizadas em 06/08/2026 — o curso em si é de 28/09 a 28/10/2026.
+Conferir ainda as **60 vagas de agendamento** (4/4/4/3 por faixa) contra os
+56 convocados cadastrados.
 
 ### 3.1. Coluna `ANTIGUIDADE` (opcional) — 3º critério de desempate
 
