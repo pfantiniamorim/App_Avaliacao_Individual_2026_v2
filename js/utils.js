@@ -539,19 +539,63 @@
      POST com Content-Type text/plain (requisição "simples", sem
      preflight CORS — funciona em GitHub Pages e em file://).     */
   var FILA_KEY = "condutores_fila_v2";
+
+  /* Um alerta por sessão. Com 15 avaliadores marcando em campo, repetir a
+     caixa a cada toque atrapalharia mais do que ajuda — mas ficar 100%
+     silencioso foi o que deixou a marcação falhar sem ninguém notar. */
+  var jaAvisou = false;
+  function avisarUmaVez(texto) {
+    if (jaAvisou) return;
+    jaAvisou = true;
+    setTimeout(function () { alert(texto); }, 0);
+  }
   function lerFila() { try { return JSON.parse(localStorage.getItem(FILA_KEY)) || []; } catch (e) { return []; } }
   function salvarFila(f) { localStorage.setItem(FILA_KEY, JSON.stringify(f)); }
 
+  /* Duas falhas MUITO diferentes eram relatadas com a mesma frase
+     ("SEM CONEXÃO"), e isso escondeu por horas um problema de implantação:
+     - "rede"     : o celular não alcançou o servidor. Reenviar resolve.
+     - "servidor" : o servidor respondeu e RECUSOU. Reenviar não resolve;
+                    é configuração errada (tipicamente a URL do Apps
+                    Script servindo o script do outro app).
+     `e.tipoFalha` carrega essa distinção, e `e.message` traz o que o
+     servidor de fato respondeu, em vez de uma mensagem inventada aqui. */
+  function falha(mensagem, tipo) {
+    var e = new Error(mensagem);
+    e.tipoFalha = tipo;
+    return e;
+  }
+
   async function postJson(dados) {
-    var r = await fetch(CFG.ENDPOINT_APPS_SCRIPT, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(dados),
-      redirect: "follow"
-    });
+    var r;
+    try {
+      r = await fetch(CFG.ENDPOINT_APPS_SCRIPT, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(dados),
+        redirect: "follow"
+      });
+    } catch (e) {
+      throw falha("sem conexão com o servidor", "rede");
+    }
+
+    // 5xx e 429 são passageiros — vale reenviar depois.
+    if (r.status >= 500 || r.status === 429) {
+      throw falha("servidor indisponível (HTTP " + r.status + ")", "rede");
+    }
+
     var j = null;
-    try { j = await r.json(); } catch (e) { j = { ok: r.ok }; }
-    if (!j.ok) throw new Error(j.erro || "Resposta de erro do Apps Script");
+    try { j = await r.json(); } catch (e) { j = null; }
+
+    if (!j) {
+      // Apps Script responde HTML quando a implantação está como "somente
+      // eu" ou exige login — nunca é falta de rede.
+      throw falha("a URL do Apps Script não devolveu JSON (HTTP " + r.status +
+        "). Confira a implantação: tipo App da Web, acesso 'Qualquer pessoa'.", "servidor");
+    }
+    if (j.ok !== true) {
+      throw falha(String(j.erro || j.mensagem || "recusado sem explicar o motivo"), "servidor");
+    }
     return j;
   }
 
@@ -576,8 +620,22 @@
       await postJson(dados);
       setStatus("SALVO ✅ " + horaAgora(), "ok");
     } catch (e) {
+      // A marcação nunca é descartada: vai para a fila e é reenviada no
+      // próximo ciclo, inclusive depois de a implantação ser corrigida.
       var fila = lerFila(); fila.push(dados); salvarFila(fila);
-      setStatus("SEM CONEXÃO — NA FILA (" + fila.length + ")", "erro");
+      if (e.tipoFalha === "servidor") {
+        console.error("[CONDUTORES] O servidor RECUSOU a marcação:", e.message, dados);
+        setStatus("⚠ SERVIDOR RECUSOU — NA FILA (" + fila.length + "): " + e.message, "erro");
+        avisarUmaVez(
+          "A marcação NÃO foi gravada na planilha.\n\n" +
+          "O servidor respondeu: " + e.message + "\n\n" +
+          "Isso NÃO é falta de internet. A causa mais comum é a URL do Apps Script " +
+          "estar servindo o script de outro app — veja PROXIMOS_PASSOS.md.\n\n" +
+          "As marcações ficam guardadas neste aparelho e são enviadas sozinhas " +
+          "assim que a implantação for corrigida.");
+      } else {
+        setStatus("SEM CONEXÃO — NA FILA (" + fila.length + ")", "erro");
+      }
     }
     return ts;
   }
@@ -622,14 +680,24 @@
   async function reenviarPendentes() {
     var fila = lerFila();
     if (!fila.length || !CFG.ENDPOINT_APPS_SCRIPT) return;
-    var restantes = [];
+    var restantes = [], motivo = null;
     for (var i = 0; i < fila.length; i++) {
       try { await postJson(fila[i]); }
-      catch (e) { restantes = restantes.concat(fila.slice(i)); break; }
+      catch (e) { motivo = e; restantes = restantes.concat(fila.slice(i)); break; }
     }
     salvarFila(restantes);
-    if (fila.length && !restantes.length) setStatus("FILA ENVIADA ✅ " + horaAgora(), "ok");
-    else if (restantes.length) setStatus("PENDENTES NA FILA: " + restantes.length, "erro");
+    if (fila.length && !restantes.length) {
+      setStatus("FILA ENVIADA ✅ " + horaAgora(), "ok");
+    } else if (restantes.length) {
+      // Antes só aparecia o número, e a fila podia ficar parada por horas
+      // sem ninguém saber por quê.
+      if (motivo && motivo.tipoFalha === "servidor") {
+        console.error("[CONDUTORES] Fila parada — o servidor recusa:", motivo.message);
+        setStatus("⚠ FILA PARADA (" + restantes.length + ") — SERVIDOR RECUSA: " + motivo.message, "erro");
+      } else {
+        setStatus("PENDENTES NA FILA: " + restantes.length + " (sem conexão)", "erro");
+      }
+    }
   }
 
   /* ---------------- Acesso do Chefe da Avaliação (PIN) ----------------

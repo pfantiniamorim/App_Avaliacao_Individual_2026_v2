@@ -40,6 +40,28 @@ Sem isso a URL continua servindo o código antigo.
   e critérios de desempate — tudo configurável em `js/config.js`, nada fixo
   na lógica (`AppUtils.calcularResultado`).
 
+## ⚠ "Marquei a penalidade e não gravou" — como diagnosticar
+
+Se o indicador de status mostrar **PENDENTES NA FILA** e a planilha não
+receber nada, leia o próprio indicador: desde 07/08/2026 ele diz **qual** das
+duas coisas aconteceu, porque elas se resolvem de formas opostas.
+
+| Indicador | O que é | O que fazer |
+|---|---|---|
+| `SEM CONEXÃO — NA FILA (n)` | O aparelho não alcançou o servidor | Nada. As marcações estão guardadas no aparelho e sobem sozinhas quando a rede voltar |
+| `⚠ SERVIDOR RECUSOU — NA FILA (n): Ação inválida…` | A URL do Apps Script está servindo o script de **outro app** | Recolar `apps_script/Code.gs` no script vinculado à planilha e criar **nova versão** da implantação (seção abaixo) |
+| `⚠ SERVIDOR RECUSOU … não devolveu JSON` | Implantação como "somente eu", ou exigindo login | Implantar → Gerenciar implantações → acesso **Qualquer pessoa** |
+
+**Nada é perdido em nenhum dos casos**: a marcação sempre vai para a fila do
+aparelho e é reenviada sozinha no ciclo seguinte, inclusive depois de a
+implantação ser corrigida. Para conferir o que está parado, abra o console do
+navegador (F12) — cada recusa aparece com o payload completo.
+
+> **Como isso passou despercebido até 07/08/2026**: a mensagem era
+> `SEM CONEXÃO` para **qualquer** falha, inclusive quando o servidor respondia
+> normalmente recusando a ação. Quem via a tela concluía que era problema de
+> internet e ia procurar sinal — enquanto a causa real era a implantação.
+
 ## Pendências decididas, ainda não implementadas
 
 Discutidas e aprovadas em conversa, mas o código ainda não foi alterado —
