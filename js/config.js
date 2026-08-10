@@ -24,10 +24,20 @@ window.APP_CONFIG = {
      Passo a passo completo em CONFIGURAR_PLANILHA.md
      (mesma planilha, 3 abas: CANDIDATOS, REGISTROS, RESULTADOS) */
 
-  // URL do Web App do Google Apps Script (termina em /exec).
-  // É o script VINCULADO à planilha (Extensões → Apps Script), que serve
-  // só este app. O agendamento tem implantação própria e separada.
-  ENDPOINT_APPS_SCRIPT: "https://script.google.com/macros/s/AKfycby6XB_N0NkWVqJTKfYUIu_7ifeTeTvJryNe5FIRvMtPpomkdRlVyJt5W4zl4OYAFpbc/exec",
+  /* URL do Web App do Google Apps Script (termina em /exec) — implantação
+     EXCLUSIVA deste app. O agendamento tem a dele, separada.
+
+     ⚠ Trocada em 07/08/2026. A URL anterior (`AKfycby6…`) continuava
+     servindo uma VERSÃO ANTIGA da implantação, com o código do agendamento,
+     mesmo depois de o código certo ser colado e salvo no editor — no Apps
+     Script, salvar não muda o que o /exec entrega; só criar uma NOVA VERSÃO
+     (ou uma nova implantação) muda. O sintoma era toda marcação de
+     penalidade voltar com "Ação inválida: undefined" e ficar presa na fila.
+
+     Como saber qual código está atrás de uma URL: abra-a no navegador.
+       {"ok":true,"servico":"Seleção de Condutores CBMDF"}  → este app ✅
+       {"ok":false,…,"codigo":"ACAO_INVALIDA"}              → agendamento ❌ */
+  ENDPOINT_APPS_SCRIPT: "https://script.google.com/macros/s/AKfycbzbuMD8b8Y5BVqyAJkVyyB8US4sPzfnWg_ga37S64VIH1Wp3NTM_9vrktpUmGReXIYp/exec",
 
   // URLs CSV de leitura (uma por aba)
   CSV_CANDIDATOS_URL: CSV_ABA + "CANDIDATOS",
