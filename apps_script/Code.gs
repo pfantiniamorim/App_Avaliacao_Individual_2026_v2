@@ -33,7 +33,12 @@
 var ABAS = {
   CANDIDATOS: ['ID', 'NOME_GUERRA', 'MATRICULA', 'ATIVO', 'ANTIGUIDADE', 'CATEGORIA', 'GBMOT'],
   REGISTROS:  ['TS', 'DATA_HORA', 'AVALIADOR', 'CANDIDATO_ID', 'CANDIDATO', 'TIPO_PENALIDADE', 'PONTOS'],
-  RESULTADOS: ['CANDIDATO_ID', 'TEMPO', 'STATUS']
+  // DATA_HORA acrescentada em 11/08/2026: sem ela não havia como saber em
+  // QUE DIA um candidato executou o TPP quando ele não levava nenhuma
+  // penalidade (sem marcação em REGISTROS, não sobrava nenhum carimbo de
+  // tempo). O relatório diário precisa disso para separar quem correu no
+  // dia, quem se adiantou e quem faltou.
+  RESULTADOS: ['CANDIDATO_ID', 'TEMPO', 'STATUS', 'DATA_HORA']
 };
 
 function doPost(e) {
@@ -93,15 +98,21 @@ function acrescentarPenalidade(d) {
 
 function gravarTempo(d) {
   var aba = obterAba('RESULTADOS');
+  // Carimbo do momento do lançamento — é o que permite ao relatório diário
+  // saber em que dia o candidato executou, mesmo sem nenhuma penalidade.
+  var carimbo = d.dataHora || Utilities.formatDate(
+    new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss');
   var valores = aba.getDataRange().getValues();
   for (var i = 1; i < valores.length; i++) {
     if (String(valores[i][0]) === String(d.candidatoId)) {
       aba.getRange(i + 1, 2).setValue(d.tempo || '');
       aba.getRange(i + 1, 3).setValue(d.status || '');
+      // Só carimba quando há tempo: limpar o campo não é uma execução.
+      if (d.tempo) aba.getRange(i + 1, 4).setValue(carimbo);
       return { ok: true, atualizado: String(d.candidatoId) };
     }
   }
-  aba.appendRow([String(d.candidatoId), d.tempo || '', d.status || '']);
+  aba.appendRow([String(d.candidatoId), d.tempo || '', d.status || '', d.tempo ? carimbo : '']);
   return { ok: true, criado: String(d.candidatoId) };
 }
 

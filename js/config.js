@@ -44,6 +44,13 @@ window.APP_CONFIG = {
   CSV_REGISTROS_URL:  CSV_ABA + "REGISTROS",
   CSV_RESULTADOS_URL: CSV_ABA + "RESULTADOS",
 
+  /* Abas do app de AGENDAMENTO (painel-de-agendamento), na mesma planilha.
+     Lidas só pelo relatório do dia (relatorio-dia.html), para saber quem
+     estava marcado para cada data e, por diferença, quem faltou e quem foi
+     adiantado. Somente leitura — este app nunca escreve nelas. */
+  CSV_FAIXAS_URL:       CSV_ABA + "Faixas",
+  CSV_AGENDAMENTOS_URL: CSV_ABA + "Agendamentos",
+
   // Intervalo do polling de leitura (ms) — atualização da visão agregada
   POLLING_MS: 12000,
 

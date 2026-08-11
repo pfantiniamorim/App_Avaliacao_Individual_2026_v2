@@ -262,7 +262,12 @@
     (objs || []).forEach(function (o) {
       var id = (o.CANDIDATO_ID || "").trim();
       if (!id) return;
-      out[id] = { tempo: (o.TEMPO || "").trim(), status: (o.STATUS || "").trim() };
+      // DATA_HORA fica vazia nas linhas gravadas antes de 11/08/2026 —
+      // quem consome trata ausência como "dia da execução não registrado".
+      out[id] = {
+        tempo: (o.TEMPO || "").trim(), status: (o.STATUS || "").trim(),
+        dataHora: (o.DATA_HORA || "").trim()
+      };
     });
     return out;
   }
@@ -316,7 +321,8 @@
         antiguidade: c.antiguidade === undefined ? null : c.antiguidade,
         categoria: c.categoria || null, categoriaBruta: c.categoriaBruta || "",
         gbmot: c.gbmot === true,
-        tempo: res.tempo || "", contagens: contagens, resultado: r
+        tempo: res.tempo || "", tempoEm: res.dataHora || "",
+        contagens: contagens, resultado: r
       };
     });
   }
@@ -836,6 +842,14 @@
     temEliminatoria: temEliminatoria, avaliarFormula: avaliarFormula, formulaSubstituida: formulaSubstituida,
     pontuacaoTempo: pontuacaoTempo, calcularResultado: calcularResultado,
     parseCSV: parseCSV, csvParaObjetos: csvParaObjetos,
+    // Baixa uma aba qualquer da planilha como lista de objetos. Usado pelo
+    // relatório do dia para ler Faixas/Agendamentos, que são do app de
+    // agendamento e não entram no polling das 3 abas daqui.
+    baixarAba: async function (url) {
+      var r = await fetch(comCacheBuster(url), { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return csvParaObjetos(await r.text());
+    },
     parseCandidatos: parseCandidatos, parseRegistros: parseRegistros, parseResultados: parseResultados,
     montarCandidatos: montarCandidatos, classificarRanking: classificarRanking,
     penalidadesDesconhecidas: penalidadesDesconhecidas,

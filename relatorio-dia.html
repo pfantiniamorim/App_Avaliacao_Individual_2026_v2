@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Relatório do Dia — TPP 3º CECEM/2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root { --linha: #000; --cinza: #5e5e5e; --claro: #f3f3f4; --erro: #ba1a1a; --ok: #1b5e20; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Public Sans', Arial, sans-serif; background: #e2e2e2; color: #000; padding: 24px 12px; }
+
+  /* A folha é paisagem: a tabela do dia tem 9 colunas e não cabe em retrato. */
+  .folha { width: 297mm; min-height: 210mm; margin: 0 auto; background: #fff; padding: 12mm 13mm; }
+
+  .barra { display: flex; gap: 8px; justify-content: center; margin: 0 auto 20px; max-width: 297mm; flex-wrap: wrap; }
+  .barra a, .barra button, .barra select {
+    font: 900 11px 'Public Sans', sans-serif; text-transform: uppercase; letter-spacing: .12em;
+    padding: 12px 18px; border: 2px solid #000; background: #fff; color: #000; cursor: pointer; text-decoration: none;
+  }
+  .barra button { background: #000; color: #fff; }
+
+  h1 { font-size: 19px; font-weight: 900; text-transform: uppercase; letter-spacing: -.02em; line-height: 1.1; }
+  .cabecalho { border-bottom: 3px solid var(--linha); padding-bottom: 10px; margin-bottom: 12px; }
+  .cabecalho p { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--cinza); }
+  .cabecalho .edital { margin-top: 6px; letter-spacing: .05em; }
+
+  h2 { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .18em;
+       background: var(--linha); color: #fff; padding: 5px 8px; margin: 13px 0 7px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid var(--linha); padding: 4px 6px; font-size: 10px; text-align: left; vertical-align: top; }
+  th { background: var(--claro); font-weight: 900; text-transform: uppercase; letter-spacing: .05em; font-size: 8.5px; }
+  td.num, th.num { text-align: center; white-space: nowrap; }
+  td.mf { font-weight: 900; }
+  tr.elim td { color: var(--erro); font-weight: 900; }
+
+  /* Painel de números do topo */
+  .resumo { display: flex; gap: 8px; margin-bottom: 4px; }
+  .resumo div { flex: 1; border: 2px solid var(--linha); padding: 8px 10px; }
+  .resumo span { display: block; font-size: 8.5px; font-weight: 900; text-transform: uppercase;
+                 letter-spacing: .14em; color: var(--cinza); }
+  .resumo strong { font-size: 26px; font-weight: 900; line-height: 1.1; }
+
+  .rodape { margin-top: 8mm; border-top: 1px solid var(--linha); padding-top: 6px;
+            font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--cinza); }
+  .vazio { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--cinza); padding: 8px 0; }
+  .nota-rodape { font-size: 9px; font-weight: 700; color: var(--cinza); margin-top: 5px; line-height: 1.5; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+    body { background: #fff; padding: 0; }
+    .barra { display: none; }
+    #status-sync { display: none !important; }
+    .folha { width: auto; min-height: 0; margin: 0; padding: 10mm 11mm; }
+    h2, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <a href="dashboard.html">&larr; Painel</a>
+  <label style="display:flex;align-items:center;gap:6px;font:900 11px 'Public Sans';text-transform:uppercase;letter-spacing:.12em;">
+    Data <input type="date" id="seletor-data" style="font:900 12px 'Public Sans';padding:9px;border:2px solid #000;"/>
+  </label>
+  <button id="btn-docx" type="button">Baixar .docx (SEI)</button>
+  <button id="btn-imprimir" type="button">Imprimir / Salvar PDF</button>
+</div>
+
+<div class="folha" id="folha">
+  <p class="vazio">CARREGANDO…</p>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/docx.js"></script>
+<script>
+(function () {
+  var CFG = window.APP_CONFIG;
+  var el = AppUtils.el;
+
+  var dados = null;      // { candidatos, registros, resultados, agregado }
+  var faixas = [];       // aba Faixas do app de agendamento
+  var agendamentos = []; // aba Agendamentos idem
+  var dataAlvo = new URLSearchParams(location.search).get('data') || hojeISO();
+
+  var campoData = document.getElementById('seletor-data');
+  campoData.value = dataAlvo;
+  campoData.addEventListener('change', function () {
+    dataAlvo = campoData.value;
+    history.replaceState(null, '', 'relatorio-dia.html?data=' + dataAlvo);
+    render();
+  });
+  document.getElementById('btn-imprimir').addEventListener('click', function () { window.print(); });
+  document.getElementById('btn-docx').addEventListener('click', baixarDocx);
+
+  function hojeISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function n2(v) { return Number(v).toFixed(2).replace('.', ','); }
+
+  /* A coluna `data` da aba Faixas pode chegar como "2026-08-12" ou já
+     formatada pelo Sheets ("12/08/2026"). Normaliza para ISO. */
+  function paraISO(valor) {
+    var v = String(valor || '').trim();
+    var br = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (br) return br[3] + '-' + br[2] + '-' + br[1];
+    var iso = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return iso ? iso[0] : v;
+  }
+
+  function dataExtenso(iso) {
+    var p = String(iso).split('-').map(Number);
+    if (p.length < 3) return iso;
+    var d = new Date(p[0], p[1] - 1, p[2]);
+    var dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    var meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+                 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    return dias[d.getDay()] + ', ' + String(p[2]).padStart(2, '0') + ' de ' + meses[p[1] - 1] + ' de ' + p[0];
+  }
+
+  /* ---------------- Apuração do dia ----------------
+     A prova de um candidato "aconteceu no dia X" quando existe marcação
+     dele em REGISTROS com data X. Quem executou sem levar nenhuma
+     penalidade não deixa rastro em REGISTROS — para esses, o dia é
+     inferido pela faixa agendada. Fica registrado na coluna Origem, para
+     a Comissão saber o que é medido e o que é inferido. */
+  function apurar() {
+    var idsDoDia = {}, faixaData = {};
+    faixas.forEach(function (f) {
+      var id = String(f.ID).trim(), iso = paraISO(f.DATA);
+      faixaData[id] = iso;
+      if (iso === dataAlvo) idsDoDia[id] = true;
+    });
+
+    var agendadoDe = {}; // matricula -> faixaId
+    agendamentos.forEach(function (a) {
+      if (String(a.STATUS || '').toUpperCase() !== 'ATIVO') return;
+      agendadoDe[String(a.MATRICULA).trim()] = String(a.FAIXAID || '').trim();
+    });
+
+    // Hora da 1ª marcação de cada candidato NO dia escolhido
+    var horaNoDia = {};
+    (dados.registros || []).forEach(function (r) {
+      var partes = String(r.dataHora || '').split(/,?\s+/);
+      var iso = paraISO(partes[0]);
+      if (iso !== dataAlvo) return;
+      var h = partes[1] || '';
+      if (!horaNoDia[r.candidatoId] || h < horaNoDia[r.candidatoId]) horaNoDia[r.candidatoId] = h;
+    });
+
+    var porId = {};
+    (dados.agregado || []).forEach(function (c) { porId[c.id] = c; });
+
+    // Contagem de penalidades por tipo, para a coluna de detalhe
+    var detalhe = {};
+    (dados.registros || []).forEach(function (r) {
+      var p = AppUtils.penaltyByNome(r.tipoPenalidade);
+      if (!p) return;
+      if (!detalhe[r.candidatoId]) detalhe[r.candidatoId] = {};
+      detalhe[r.candidatoId][p.nome] = (detalhe[r.candidatoId][p.nome] || 0) + 1;
+    });
+
+    var executaram = [], faltantes = [], adiantados = [];
+
+    Object.keys(porId).forEach(function (id) {
+      var c = porId[id];
+      if (c.ativo === false || !c.nome) return;
+      var faixa = agendadoDe[id] || '';
+      var eraDoDia = !!idsDoDia[faixa];
+      var temTempo = !!c.tempo;
+      var marcouHoje = !!horaNoDia[id];
+
+      /* Em que dia este candidato executou?
+         1. Se marcou penalidade, a data da marcação decide — é medida.
+         2. Senão, vale o carimbo DATA_HORA de RESULTADOS (gravado desde
+            11/08/2026 junto com o tempo) — também é medido.
+         3. Sem os dois (linhas antigas de RESULTADOS, sem carimbo), só
+            resta inferir: tem tempo lançado e a faixa agendada é de uma
+            data POSTERIOR a esta ⇒ só pode ter se adiantado. Vai para o
+            relatório com a origem marcada como inferida, nunca calada. */
+      var diaDoCarimbo = c.tempoEm ? paraISO(String(c.tempoEm).split(/,?\s+/)[0]) : '';
+      var carimbadoHoje = diaDoCarimbo === dataAlvo;
+      var dataDaFaixa = faixaData[faixa] || '';
+      var inferido = !marcouHoje && !diaDoCarimbo && temTempo && !eraDoDia &&
+        dataDaFaixa && dataDaFaixa > dataAlvo;
+
+      if (marcouHoje || carimbadoHoje || (temTempo && eraDoDia && !diaDoCarimbo) || inferido) {
+        var reg = {
+          id: id, nome: c.nome, matricula: c.matricula || id,
+          categoria: c.categoria || '', gbmot: c.gbmot,
+          hora: horaNoDia[id] || (carimbadoHoje ? (String(c.tempoEm).split(/,?\s+/)[1] || '') : ''),
+          tempo: c.tempo || '', inferido: inferido,
+          faixa: faixa || '(sem agendamento)', eraDoDia: eraDoDia,
+          resultado: c.resultado, detalhe: detalhe[id] || {},
+        };
+        executaram.push(reg);
+        if (!eraDoDia) adiantados.push(reg);
+      } else if (eraDoDia && !diaDoCarimbo) {
+        faltantes.push({ id: id, nome: c.nome, matricula: c.matricula || id,
+          categoria: c.categoria || '', faixa: faixa });
+      }
+    });
+
+    executaram.sort(function (a, b) {
+      if (a.hora && b.hora) return a.hora.localeCompare(b.hora);
+      if (a.hora) return -1;
+      if (b.hora) return 1;
+      return a.nome.localeCompare(b.nome);
+    });
+    faltantes.sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+
+    var totalAtivos = Object.keys(porId).filter(function (i) {
+      return porId[i].ativo !== false && porId[i].nome;
+    }).length;
+    var jaExecutaram = Object.keys(porId).filter(function (i) {
+      return porId[i].ativo !== false && porId[i].nome && porId[i].tempo;
+    }).length;
+
+    return {
+      executaram: executaram, faltantes: faltantes, adiantados: adiantados,
+      agendadosDoDia: Object.keys(agendadoDe).filter(function (m) { return idsDoDia[agendadoDe[m]]; }).length,
+      vagasDoDia: faixas.filter(function (f) { return paraISO(f.DATA) === dataAlvo; })
+        .reduce(function (s, f) { return s + (Number(f.VAGASTOTAL) || 0); }, 0),
+      totalAtivos: totalAtivos, jaExecutaram: jaExecutaram, faltamNoTotal: totalAtivos - jaExecutaram,
+    };
+  }
+
+  /* ---------------- Render ---------------- */
+  function tabela(pai, cabecalhos, linhas, classesLinha) {
+    var t = el('table');
+    var thead = el('thead'), trh = el('tr');
+    cabecalhos.forEach(function (c) {
+      trh.appendChild(el('th', typeof c === 'object' && c.num ? 'num' : null, typeof c === 'object' ? c.t : c));
+    });
+    thead.appendChild(trh); t.appendChild(thead);
+    var tb = el('tbody');
+    linhas.forEach(function (l, i) {
+      var tr = el('tr', classesLinha && classesLinha[i] ? classesLinha[i] : null);
+      l.forEach(function (v, j) {
+        var c = cabecalhos[j];
+        tr.appendChild(el('td', (typeof c === 'object' && c.num ? 'num' : '') + (j === l.length - 1 ? ' mf' : ''), String(v)));
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); pai.appendChild(t);
+    return t;
+  }
+
+  function resumoPenalidades(det) {
+    var partes = Object.keys(det).map(function (nome) {
+      var p = AppUtils.penaltyByNome(nome);
+      var curto = nome.split(/[ /]/)[0];
+      return det[nome] + '× ' + curto + (p && !AppUtils.isEliminatoria(p) ? '' : ' (ELIM.)');
+    });
+    return partes.length ? partes.join(', ') : '—';
+  }
+
+  /* A coluna CATEGORIA da planilha já traz "GBMOT" para quem concorre às
+     vagas reservadas; repetir o selo geraria "GBMOT · GBMOT" no relatório. */
+  function rotuloCategoria(r) {
+    var cat = r.categoria || '';
+    return cat + (r.gbmot && cat.toUpperCase().indexOf('GBMOT') < 0 ? ' · GBMOT' : '');
+  }
+
+  function render() {
+    var folha = document.getElementById('folha');
+    folha.textContent = '';
+    if (!dados) { folha.appendChild(el('p', 'vazio', 'CARREGANDO…')); return; }
+
+    var ed = CFG.EDITAL || {};
+    var a = apurar();
+
+    var cab = el('div', 'cabecalho');
+    cab.appendChild(el('h1', null, 'Relatório Diário do ' + (ed.prova || 'Teste Profissional Prático')));
+    cab.appendChild(el('p', null, (ed.unidade || '') + ' — ' + (ed.curso || '')));
+    cab.appendChild(el('p', 'edital', (ed.numero || '') + ' · Local: ' + (ed.local || '') +
+      ' · Viatura: ' + (ed.viatura || '')));
+    cab.appendChild(el('p', 'edital', 'SESSÃO DE ' + dataExtenso(dataAlvo).toUpperCase()));
+    folha.appendChild(cab);
+
+    // Painel de números
+    var res = el('div', 'resumo');
+    [['Executaram o TPP', a.executaram.length], ['Agendados para o dia', a.agendadosDoDia],
+     ['Adiantados', a.adiantados.length], ['Faltantes', a.faltantes.length],
+     ['Falta executar (geral)', a.faltamNoTotal + ' de ' + a.totalAtivos]].forEach(function (par) {
+      var d = el('div');
+      d.appendChild(el('span', null, par[0]));
+      d.appendChild(el('strong', null, String(par[1])));
+      res.appendChild(d);
+    });
+    folha.appendChild(res);
+
+    // Bloco 1 — quem executou
+    folha.appendChild(el('h2', null, 'Candidatos que executaram o TPP em ' + dataExtenso(dataAlvo)));
+    if (!a.executaram.length) {
+      folha.appendChild(el('p', 'vazio', 'Nenhuma execução registrada nesta data.'));
+    } else {
+      var linhas = [], classes = [];
+      a.executaram.forEach(function (r, i) {
+        var q = r.resultado || {};
+        linhas.push([
+          i + 1, r.hora || '—', r.nome, r.matricula, rotuloCategoria(r),
+          r.tempo || '—',
+          q.pontuacaoTempo === null || q.pontuacaoTempo === undefined ? '—' : n2(q.pontuacaoTempo),
+          '-' + (q.pontosPen || 0), resumoPenalidades(r.detalhe),
+          r.inferido ? 'inferida' : 'registrada',
+          q.eliminado ? 'ELIMINADO' : (q.mf === null || q.mf === undefined ? '—' : n2(q.mf)),
+        ]);
+        classes.push(q.eliminado ? 'elim' : '');
+      });
+      tabela(folha, [{ t: '#', num: true }, { t: 'Hora', num: true }, 'Nome de guerra',
+        { t: 'Matrícula', num: true }, 'Categoria', { t: 'Tempo', num: true },
+        { t: 'Pts tempo', num: true }, { t: 'Penal.', num: true }, 'Infrações apuradas',
+        { t: 'Data exec.', num: true }, { t: 'MF', num: true }], linhas, classes);
+
+      var temInferido = a.executaram.some(function (r) { return r.inferido; });
+      folha.appendChild(el('p', 'nota-rodape',
+        'Hora = primeira infração registrada pela banca. Candidato que executa sem nenhuma infração não gera ' +
+        'marcação de horário; sua execução é confirmada pelo tempo lançado em RESULTADOS.' +
+        (temInferido
+          ? ' “Data exec. = inferida”: execução anterior a 11/08/2026, quando a planilha ainda não carimbava a ' +
+            'hora do lançamento do tempo. Nesses casos a data foi deduzida do fato de o candidato já ter tempo ' +
+            'apurado antes da sua faixa agendada — confirmar com a banca antes de homologar.'
+          : '')));
+    }
+
+    // Bloco 2 — adiantados
+    folha.appendChild(el('h2', null, 'Candidatos adiantados (executaram fora da data agendada)'));
+    if (!a.adiantados.length) {
+      folha.appendChild(el('p', 'vazio', 'Nenhum candidato adiantado nesta data.'));
+    } else {
+      tabela(folha, ['Nome de guerra', { t: 'Matrícula', num: true }, 'Categoria',
+        'Faixa de origem', { t: 'Hora da execução', num: true }, { t: 'MF', num: true }],
+        a.adiantados.map(function (r) {
+          var q = r.resultado || {};
+          return [r.nome, r.matricula, r.categoria, r.faixa, r.hora || '—',
+            q.eliminado ? 'ELIMINADO' : (q.mf === null || q.mf === undefined ? '—' : n2(q.mf))];
+        }));
+    }
+
+    // Bloco 3 — faltantes
+    folha.appendChild(el('h2', null, 'Candidatos agendados que NÃO executaram (faltantes)'));
+    if (!a.faltantes.length) {
+      folha.appendChild(el('p', 'vazio', 'Nenhum faltante — todos os agendados executaram o TPP.'));
+    } else {
+      tabela(folha, ['Nome de guerra', { t: 'Matrícula', num: true }, 'Categoria', 'Faixa agendada'],
+        a.faltantes.map(function (r) { return [r.nome, r.matricula, r.categoria, r.faixa]; }));
+    }
+
+    var rod = el('div', 'rodape');
+    rod.appendChild(el('p', null, 'Emitido em ' + new Date().toLocaleString('pt-BR') +
+      ' · Fonte: planilha Selecao_Condutores_2026 (abas CANDIDATOS, REGISTROS, RESULTADOS, Faixas, Agendamentos)'));
+    rod.appendChild(el('p', null, 'MF = [(pontuação do tempo × 1,75) + (100 − penalidades)] ÷ 2,75 — ' +
+      (ed.numero || '') + ', item 8'));
+    folha.appendChild(rod);
+  }
+
+  /* ---------------- .docx para o SEI ---------------- */
+  function baixarDocx() {
+    if (!dados) { alert('Os dados ainda estão carregando.'); return; }
+    var ed = CFG.EDITAL || {};
+    var a = apurar();
+    var doc = AppDocx.novo();
+
+    doc.titulo('Relatório Diário do ' + (ed.prova || 'Teste Profissional Prático'));
+    doc.subtitulo((ed.unidade || '') + ' — ' + (ed.curso || ''));
+    doc.subtitulo((ed.numero || '') + ' · Local: ' + (ed.local || '') + ' · Viatura: ' + (ed.viatura || ''));
+    doc.subtitulo('Sessão de ' + dataExtenso(dataAlvo));
+
+    doc.secao('Resumo da sessão');
+    doc.ficha([
+      ['Candidatos que executaram o TPP', String(a.executaram.length)],
+      ['Agendados para a data', String(a.agendadosDoDia)],
+      ['Vagas ofertadas na data', String(a.vagasDoDia)],
+      ['Adiantados (fora da data agendada)', String(a.adiantados.length)],
+      ['Faltantes', String(a.faltantes.length)],
+      ['Falta executar (geral)', a.faltamNoTotal + ' de ' + a.totalAtivos],
+    ]);
+
+    doc.secao('Candidatos que executaram o TPP');
+    var linhas = [['#', 'Hora', 'Nome de guerra', 'Matrícula', 'Categoria', 'Tempo', 'Pts tempo', 'Penal.', 'Data exec.', 'MF']];
+    a.executaram.forEach(function (r, i) {
+      var q = r.resultado || {};
+      linhas.push([String(i + 1), r.hora || '—', r.nome, String(r.matricula),
+        rotuloCategoria(r), r.tempo || '—',
+        q.pontuacaoTempo === null || q.pontuacaoTempo === undefined ? '—' : n2(q.pontuacaoTempo),
+        '-' + (q.pontosPen || 0), r.inferido ? 'inferida' : 'registrada',
+        q.eliminado ? 'ELIMINADO' : (q.mf === null || q.mf === undefined ? '—' : n2(q.mf))]);
+    });
+    doc.tabela(linhas, { cabecalho: true, larguras: [4, 8, 21, 10, 12, 8, 8, 7, 10, 12], centradas: [0, 1, 3, 5, 6, 7, 8, 9] });
+
+    doc.secao('Infrações apuradas por candidato');
+    var det = [['Nome de guerra', 'Infrações', 'Total de pontos']];
+    a.executaram.forEach(function (r) {
+      det.push([r.nome, resumoPenalidades(r.detalhe), '-' + ((r.resultado || {}).pontosPen || 0)]);
+    });
+    doc.tabela(det, { cabecalho: true, larguras: [26, 58, 16], centradas: [2] });
+
+    doc.secao('Candidatos adiantados (executaram fora da data agendada)');
+    if (!a.adiantados.length) {
+      doc.paragrafo('Nenhum candidato adiantado nesta data.');
+    } else {
+      var ad = [['Nome de guerra', 'Matrícula', 'Categoria', 'Faixa de origem', 'Hora', 'MF']];
+      a.adiantados.forEach(function (r) {
+        var q = r.resultado || {};
+        ad.push([r.nome, String(r.matricula), r.categoria, r.faixa, r.hora || '—',
+          q.eliminado ? 'ELIMINADO' : (q.mf === null || q.mf === undefined ? '—' : n2(q.mf))]);
+      });
+      doc.tabela(ad, { cabecalho: true, larguras: [26, 13, 15, 18, 13, 15], centradas: [1, 4, 5] });
+    }
+
+    doc.secao('Candidatos agendados que NÃO executaram (faltantes)');
+    if (!a.faltantes.length) {
+      doc.paragrafo('Nenhum faltante — todos os agendados executaram o TPP.');
+    } else {
+      var ft = [['Nome de guerra', 'Matrícula', 'Categoria', 'Faixa agendada']];
+      a.faltantes.forEach(function (r) { ft.push([r.nome, String(r.matricula), r.categoria, r.faixa]); });
+      doc.tabela(ft, { cabecalho: true, larguras: [34, 20, 22, 24], centradas: [1, 3] });
+    }
+
+    doc.secao('Observações');
+    doc.paragrafo('MF = [(pontuação do tempo × 1,75) + (100 − penalidades)] ÷ 2,75 — ' +
+      (ed.numero || '') + ', item 8.');
+    doc.paragrafo('A coluna Hora corresponde à primeira infração registrada pela banca. ' +
+      'Candidato que executou sem infração não gera marcação de horário; sua execução é ' +
+      'confirmada pelo tempo lançado na aba RESULTADOS.');
+    if (a.executaram.some(function (r) { return r.inferido; })) {
+      doc.paragrafo('Data exec. = "inferida": execução anterior a 11/08/2026, quando a planilha ainda não ' +
+        'carimbava a hora do lançamento do tempo. Nesses casos a data foi deduzida do fato de o candidato já ' +
+        'possuir tempo apurado antes da sua faixa agendada — recomenda-se confirmação com a banca antes da ' +
+        'homologação. A partir de 11/08/2026 a data de execução passou a ser registrada automaticamente.');
+    }
+    doc.paragrafo('Emitido em ' + new Date().toLocaleString('pt-BR') +
+      ' a partir da planilha Selecao_Condutores_2026.');
+
+    AppDocx.baixar(doc, 'TPP-Relatorio-Diario-' + dataAlvo + '.docx');
+  }
+
+  /* ---------------- Carga ---------------- */
+  // Faixas e Agendamentos não mudam durante a sessão: lidas uma vez.
+  Promise.all([
+    AppUtils.baixarAba(CFG.CSV_FAIXAS_URL).catch(function () { return []; }),
+    AppUtils.baixarAba(CFG.CSV_AGENDAMENTOS_URL).catch(function () { return []; }),
+  ]).then(function (r) {
+    faixas = r[0]; agendamentos = r[1];
+    if (!faixas.length) {
+      console.warn('[CONDUTORES] Aba Faixas vazia ou ilegível — "agendados/faltantes/adiantados" ficam zerados.');
+    }
+    render();
+  });
+
+  AppUtils.iniciarPolling(function (d) {
+    if (!d) return;
+    dados = d;
+    render();
+  });
+})();
+</script>
+</body>
+</html>
