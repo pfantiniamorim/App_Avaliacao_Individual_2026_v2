@@ -47,6 +47,23 @@ window.APP_CONFIG = {
   // Intervalo do polling de leitura (ms) — atualização da visão agregada
   POLLING_MS: 12000,
 
+  /* Validade da fila offline (ms). Uma marcação que não conseguiu subir
+     fica guardada no aparelho e é reenviada sozinha — mas só enquanto
+     for do DIA da prova.
+
+     ⚠ Existe por um caso real (11/08/2026): uma marcação de teste feita
+     em 05/08 ficou 5 dias presa na fila de um aparelho, porque a
+     implantação do Apps Script estava recusando tudo. Quando a
+     implantação foi corrigida na manhã da prova, a fila esvaziou e a
+     marcação velha entrou no meio dos candidatos reais, com um nome de
+     infração que nem existe mais na tabela.
+
+     12h cobre com folga o pior caso legítimo (aparelho sem sinal a manhã
+     inteira) sem deixar a marcação atravessar para o dia seguinte. O que
+     passa da validade NÃO é apagado: vai para a quarentena
+     (`condutores_fila_vencida`) e é avisado na tela. */
+  FILA_VALIDADE_MS: 12 * 60 * 60 * 1000,
+
   /* ================= REGRAS DO EDITAL (EDITÁVEIS) =================
      Fonte: EDITAL Nº 047/2026-CBMDF/DIREN/SEITC — 3º CECEM/2026,
      item 8 (Teste Profissional Prático). Transcrito em 05/08/2026. */

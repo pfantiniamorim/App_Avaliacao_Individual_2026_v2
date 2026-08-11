@@ -186,13 +186,28 @@ tailwind.config = { theme: { extend: {
       // Feed de auditoria: cada penalidade individual
       var feed = document.getElementById('feed-content');
       feed.textContent = '';
-      data.registros.slice().sort(function (a, b) { return (b.ts || '').localeCompare(a.ts || ''); }).slice(0, 30).forEach(function (r) {
-        var linha = el('div', 'p-2 border-b border-zinc-900 last:border-0 flex items-center justify-between gap-2');
-        var p = el('p', 'text-[10px] font-medium text-zinc-300');
+
+      /* Marcação com nome de infração fora da TABELA_PENALIDADES não
+         pontua para ninguém e ainda acende o alerta vermelho em todas as
+         telas. Como o TS dela costuma ser antigo (veio de uma fila presa),
+         ela afundava para o fim da lista e ficava fora das 30 mais
+         recentes — visível no alarme, mas impossível de remover pela tela.
+         Vai fixada no topo até alguém resolver. */
+      var recentes = data.registros.slice().sort(function (a, b) { return (b.ts || '').localeCompare(a.ts || ''); });
+      var orfas = recentes.filter(function (r) { return !AppUtils.penaltyByNome(r.tipoPenalidade); });
+      var normais = recentes.filter(function (r) { return AppUtils.penaltyByNome(r.tipoPenalidade); }).slice(0, 30);
+
+      orfas.concat(normais).forEach(function (r) {
+        var orfa = !AppUtils.penaltyByNome(r.tipoPenalidade);
+        var linha = el('div', 'p-2 border-b border-zinc-900 last:border-0 flex items-center justify-between gap-2' +
+          (orfa ? ' bg-red-950/40' : ''));
+        var p = el('p', 'text-[10px] font-medium ' + (orfa ? 'text-red-300' : 'text-zinc-300'));
         p.appendChild(el('span', 'text-zinc-500', (r.dataHora || '--') + ' '));
         p.appendChild(document.createTextNode(
           (r.avaliador || '?') + ' → ' + (r.tipoPenalidade || '?') + ' — ' + (r.candidato || '?')
         ));
+        if (orfa) p.appendChild(el('span', 'block text-[9px] font-black uppercase text-red-400',
+          '⚠ infração fora da tabela — não pontua para ninguém'));
         linha.appendChild(p);
         var btnRem = el('button', 'text-[9px] underline uppercase font-black text-zinc-500 hover:text-red-500 shrink-0', 'Remover');
         btnRem.addEventListener('click', async function () {

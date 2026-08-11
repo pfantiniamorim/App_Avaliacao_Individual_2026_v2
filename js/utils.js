@@ -562,6 +562,46 @@
   function lerFila() { try { return JSON.parse(localStorage.getItem(FILA_KEY)) || []; } catch (e) { return []; } }
   function salvarFila(f) { localStorage.setItem(FILA_KEY, JSON.stringify(f)); }
 
+  /* Marcações que passaram da validade não somem: ficam aqui, para o
+     Chefe decidir o que fazer, em vez de entrarem sozinhas na prova
+     errada dias depois. */
+  var FILA_VENCIDA_KEY = "condutores_fila_vencida";
+
+  function idadeDaMarcacao(d) {
+    var ms = Number(String(d && d.ts || "").split("-")[0]);
+    return ms ? Date.now() - ms : 0;
+  }
+
+  /* Separa da fila o que é velho demais para subir. Ver o comentário de
+     FILA_VALIDADE_MS em js/config.js: uma marcação de 05/08 presa numa
+     fila entrou no meio da prova de 11/08 quando a implantação foi
+     corrigida. */
+  function quarentenarVencidas() {
+    var validade = CFG.FILA_VALIDADE_MS;
+    if (!validade) return lerFila();
+    var fila = lerFila();
+    var atuais = [], vencidas = [];
+    fila.forEach(function (d) {
+      (idadeDaMarcacao(d) > validade ? vencidas : atuais).push(d);
+    });
+    if (!vencidas.length) return atuais;
+
+    var guardadas;
+    try { guardadas = JSON.parse(localStorage.getItem(FILA_VENCIDA_KEY)) || []; } catch (e) { guardadas = []; }
+    localStorage.setItem(FILA_VENCIDA_KEY, JSON.stringify(guardadas.concat(vencidas)));
+    salvarFila(atuais);
+
+    console.warn("[CONDUTORES] Marcações velhas retiradas da fila (não foram gravadas):", vencidas);
+    setStatus("⚠ " + vencidas.length + " MARCAÇÃO(ÕES) ANTIGA(S) RETIDA(S) — VER O CHEFE", "erro");
+    avisarUmaVez(
+      vencidas.length + " marcação(ões) presa(s) neste aparelho há mais de " +
+      Math.round(validade / 3600000) + "h NÃO foram enviadas.\n\n" +
+      "São de outro dia de prova e entrariam no meio dos candidatos de hoje. " +
+      "Ficaram guardadas no aparelho para o Chefe da Avaliação conferir.\n\n" +
+      "Candidato(s): " + vencidas.map(function (d) { return d.candidato || d.candidatoId; }).join(", "));
+    return atuais;
+  }
+
   /* Duas falhas MUITO diferentes eram relatadas com a mesma frase
      ("SEM CONEXÃO"), e isso escondeu por horas um problema de implantação:
      - "rede"     : o celular não alcançou o servidor. Reenviar resolve.
@@ -688,8 +728,9 @@
   }
 
   async function reenviarPendentes() {
-    var fila = lerFila();
-    if (!fila.length || !CFG.ENDPOINT_APPS_SCRIPT) return;
+    if (!CFG.ENDPOINT_APPS_SCRIPT) return;
+    var fila = quarentenarVencidas();
+    if (!fila.length) return;
     var restantes = [], motivo = null;
     for (var i = 0; i < fila.length; i++) {
       try { await postJson(fila[i]); }
@@ -805,6 +846,10 @@
     marcarPenalidade: marcarPenalidade, removerPenalidade: removerPenalidade,
     salvarTempo: salvarTempo, salvarCandidato: salvarCandidato, removerCandidato: removerCandidato,
     reenviarPendentes: reenviarPendentes, lerFila: lerFila,
+    lerFilaVencida: function () {
+      try { return JSON.parse(localStorage.getItem(FILA_VENCIDA_KEY)) || []; } catch (e) { return []; }
+    },
+    limparFilaVencida: function () { localStorage.removeItem(FILA_VENCIDA_KEY); },
     el: el,
     pedirPin: pedirPin, sairChefe: sairChefe
   };

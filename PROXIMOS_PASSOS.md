@@ -132,6 +132,73 @@ na tela.
   planilha aparece na tabela ao selecionar o candidato; remover derruba a
   linha e o total PENALIDADES/MF no mesmo ciclo, sem esperar o polling.
 
+## 2026-08-11 — Erros de conexão do 1º dia de prova (15 candidatos)
+
+Auditoria da aba `REGISTROS` depois do primeiro dia (52 linhas, 09:11–11:41).
+
+| Verificação | Resultado |
+|---|---|
+| TS duplicado (fila gravando duas vezes) | ✅ nenhum — nada foi contado em dobro |
+| Marcação de outro dia dentro da prova | ❌ **1 encontrada** (detalhe abaixo) |
+| Linha fora de ordem (fila atrasada) | 2 — a forasteira e 1 de `SGT J. CORDEIRO` às 09:44:08 (ABITBOL), que subiu ~1s atrasada. Só ordem de gravação, o dado está certo |
+| Infração com nome fora da tabela | ❌ 1 — a mesma linha forasteira |
+
+### A marcação forasteira (causa do alarme vermelho)
+
+```
+TS 1785952955740-9892 | 05/08/2026 15:02:35 | SGT BRUNO PARENTE
+c45475389 | SGT JANIO | "Toque em Cone" | 3
+```
+
+Foi feita em **05/08** num teste, ficou **5,2 dias presa na fila offline** de
+um aparelho — porque naquela época a implantação do Apps Script recusava
+tudo (`ACAO_INVALIDA`) — e subiu sozinha **no meio da prova de 11/08**,
+entre as 09:22 e as 09:36, quando a implantação foi corrigida na manhã da
+prova e a fila daquele aparelho esvaziou.
+
+**Não alterou a nota de ninguém**, por dois motivos que se somam: o
+`CANDIDATO_ID` (`c45475389`) é o formato antigo e não casa com nenhuma
+matrícula, e o nome `"Toque em Cone"` não existe mais na
+`TABELA_PENALIDADES` (hoje é `"Toque em Cone/Balizador"`). Mas **acendia o
+alarme `⚠ MARCAÇÃO NÃO RECONHECIDA` em todas as telas** — e, por ter o TS
+mais antigo de todos, afundava para o fim do Log de Auditoria, fora das 30
+linhas exibidas: dava para ver o alarme e não dava para remover a causa.
+
+### Correções aplicadas
+
+1. **`apps_script/Code.gs` — `acrescentarPenalidade()` virou idempotente.**
+   O `TS` é gerado uma vez por toque e viaja na fila. Se o POST gravava mas
+   a resposta se perdia (rede de celular oscilando), o app concluía que
+   falhou, enfileirava e reenviava o **mesmo TS** — e a penalidade era
+   contada duas vezes. Agora regravar um TS existente é no-op. Hoje não
+   aconteceu, mas com 15 avaliadores em campo era questão de tempo.
+2. **`js/config.js` + `js/utils.js` — fila offline com validade
+   (`FILA_VALIDADE_MS`, 12h).** O que passa da validade **não é apagado**:
+   vai para a quarentena (`condutores_fila_vencida`), com aviso na tela e
+   no console, para o Chefe decidir. É a correção que impede exatamente o
+   caso acima de repetir com os mesmos aparelhos amanhã.
+3. **`dashboard.html` — marcação com infração fora da tabela fica fixada no
+   topo** do Log de Auditoria, em vermelho, com o botão Remover — em vez de
+   afundar por TS antigo.
+4. **`apps_script/Code.gs` — `limparMarcacoesDeOutrosDias()`**, com modo
+   `SIMULAR` (lista sem apagar) antes de executar de verdade.
+
+### Pendente de decisão humana — rajadas de marcação
+
+Dois casos que **não** são erro técnico e por isso não foram tocados, mas
+que merecem conferência com o avaliador antes de fechar as notas:
+
+| Avaliador | Candidato | Marcações | Janela | Impacto |
+|---|---|---|---|---|
+| SGT MELO | VALBER (1297916) | 4× Derrubada | 12s (11:19:26/29/34/38) | −40 |
+| SGT J. CORDEIRO | ABITBOL (1053370) | 3× Derrubada | 91s | −30 |
+
+Quatro derrubadas em 12 segundos é fisicamente difícil num percurso — pode
+ser toque repetido no botão por falta de confirmação na tela. VALBER está
+com **−63 no total** e ABITBOL com **−65**. Só o avaliador pode dizer se
+foram infrações distintas; o Log de Auditoria mostra cada uma com hora e
+autor, e o botão Remover agora está disponível ao Chefe.
+
 ### 2b. Limpeza de dados de teste em REGISTROS
 
 Adicionada `limparRegistrosDeTeste()` em `apps_script/Code.gs` — função de

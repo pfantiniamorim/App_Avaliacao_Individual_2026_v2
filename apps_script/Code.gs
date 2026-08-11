@@ -69,13 +69,26 @@ function doGet() {
 
 /* ---------------- Ações ---------------- */
 
+/* O TS é gerado UMA vez por toque no botão e viaja junto na fila offline.
+   Se o POST grava mas a resposta se perde no caminho (rede de celular
+   oscilando), o app conclui que falhou, guarda na fila e reenvia o MESMO
+   TS — e sem esta checagem a penalidade era contada duas vezes contra o
+   candidato. Regravar o mesmo TS agora é no-op, então reenviar é sempre
+   seguro. */
 function acrescentarPenalidade(d) {
   var aba = obterAba('REGISTROS');
+  var ts = String(d.ts);
+  var valores = aba.getDataRange().getValues();
+  for (var i = 1; i < valores.length; i++) {
+    if (String(valores[i][0]) === ts) {
+      return { ok: true, ts: ts, duplicada: true };
+    }
+  }
   aba.appendRow([
-    String(d.ts), d.dataHora || '', d.avaliador || '', d.candidatoId || '',
+    ts, d.dataHora || '', d.avaliador || '', d.candidatoId || '',
     d.candidato || '', d.tipoPenalidade || '', d.pontos !== undefined ? d.pontos : ''
   ]);
-  return { ok: true, ts: String(d.ts) };
+  return { ok: true, ts: ts };
 }
 
 function gravarTempo(d) {
@@ -179,4 +192,36 @@ function limparRegistrosDeTeste() {
     aba.deleteRows(2, ultimaLinha - 1);
   }
   Logger.log('REGISTROS limpo: %s linha(s) de penalidade removida(s).', ultimaLinha - 1);
+}
+
+/* Remove marcações de dias ANTERIORES ao da prova, preservando o dia
+   corrente. Existe por causa de um caso real (11/08/2026): uma marcação
+   de teste feita em 05/08 ficou 5 dias presa na fila de um aparelho —
+   porque a implantação do Apps Script estava recusando tudo — e subiu
+   sozinha no meio da prova quando a implantação foi corrigida.
+
+   Ajuste DIA_DA_PROVA para o dia que deve ser PRESERVADO e execute.
+   Faz uma simulação primeiro: rode com SIMULAR = true, confira o log,
+   depois troque para false e rode de novo. */
+function limparMarcacoesDeOutrosDias() {
+  var DIA_DA_PROVA = '2026-08-12'; // AAAA-MM-DD — o dia que fica
+  var SIMULAR = true;              // true = só lista; false = apaga
+
+  var corte = new Date(DIA_DA_PROVA + 'T00:00:00').getTime();
+  var aba = obterAba('REGISTROS');
+  var valores = aba.getDataRange().getValues();
+  var removidas = 0;
+
+  for (var i = valores.length - 1; i >= 1; i--) {
+    var ts = String(valores[i][0]);
+    var ms = Number(ts.split('-')[0]);
+    if (!ms || ms >= corte) continue;
+    Logger.log('%s linha %s: %s | %s | %s | %s',
+      SIMULAR ? '[SIMULAÇÃO] removeria' : 'REMOVIDA',
+      i + 1, ts, valores[i][1], valores[i][2], valores[i][4]);
+    if (!SIMULAR) aba.deleteRow(i + 1);
+    removidas++;
+  }
+  Logger.log('%s marcação(ões) de outros dias encontrada(s). SIMULAR = %s',
+    removidas, SIMULAR);
 }
