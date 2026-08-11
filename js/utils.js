@@ -41,6 +41,12 @@
     return CFG.TABELA_PENALIDADES.find(function (p) { return p.key === key; }) || null;
   }
 
+  // REGISTROS guarda TIPO_PENALIDADE pelo NOME (não pela key) — ver
+  // marcarPenalidade(). Aceita os dois para não quebrar quem já usa key.
+  function penaltyByNome(nome) {
+    return CFG.TABELA_PENALIDADES.find(function (p) { return p.nome === nome || p.key === nome; }) || null;
+  }
+
   function isEliminatoria(p) {
     return !!p && String(p.pontos).toUpperCase() === "ELIMINATORIO";
   }
@@ -532,7 +538,11 @@
       reenviarPendentes();
     }
     tick();
-    return setInterval(tick, CFG.POLLING_MS || 12000);
+    var intervalId = setInterval(tick, CFG.POLLING_MS || 12000);
+    // `atualizarAgora` permite refletir na hora uma marcação/remoção que
+    // este próprio aparelho acabou de fazer, em vez de esperar até
+    // POLLING_MS (12s) pelo próximo ciclo automático.
+    return { atualizarAgora: tick, parar: function () { clearInterval(intervalId); } };
   }
 
   /* ---------------- Escrita (Apps Script doPost) ----------------
@@ -781,7 +791,7 @@
 
   window.AppUtils = {
     timeToSeconds: timeToSeconds, isValidTime: isValidTime, horaAgora: horaAgora, fmtHoje: fmtHoje,
-    penaltyByKey: penaltyByKey, isEliminatoria: isEliminatoria, pontosPenalidades: pontosPenalidades,
+    penaltyByKey: penaltyByKey, penaltyByNome: penaltyByNome, isEliminatoria: isEliminatoria, pontosPenalidades: pontosPenalidades,
     temEliminatoria: temEliminatoria, avaliarFormula: avaliarFormula, formulaSubstituida: formulaSubstituida,
     pontuacaoTempo: pontuacaoTempo, calcularResultado: calcularResultado,
     parseCSV: parseCSV, csvParaObjetos: csvParaObjetos,

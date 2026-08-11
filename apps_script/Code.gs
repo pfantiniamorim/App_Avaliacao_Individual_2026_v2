@@ -166,3 +166,17 @@ function responder(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+/* ---------------- Manutenção (rodar manualmente, NÃO fica exposta no doPost) ----------------
+   Apaga todas as marcações de REGISTROS (mantém o cabeçalho), sem tocar em
+   CANDIDATOS nem RESULTADOS. Uso: no editor do Apps Script, escolher esta
+   função no seletor ao lado de "Executar" e clicar em Executar. Pede
+   autorização na primeira vez; depois disso é 1 clique. */
+function limparRegistrosDeTeste() {
+  var aba = obterAba('REGISTROS');
+  var ultimaLinha = aba.getLastRow();
+  if (ultimaLinha > 1) {
+    aba.deleteRows(2, ultimaLinha - 1);
+  }
+  Logger.log('REGISTROS limpo: %s linha(s) de penalidade removida(s).', ultimaLinha - 1);
+}

@@ -96,29 +96,49 @@ sem PIN) e as URLs CSV de leitura continuam públicas — inerente a um app sem
 login e custo zero. O ganho real desta mudança é tirar o PIN do código-fonte
 e blindar as ações que alteram cadastro/configuração.
 
-### 2. Corrigir a persistência da lista "Minhas marcações" (bug confirmado)
+### 2. ✅ Persistência da lista "Minhas marcações" (bug confirmado em 11/08/2026)
 
-**Sintoma relatado:** depois de recarregar a página ou trocar de candidato em
-`avaliacao.html`, o botão "Remover" desaparece e não há mais como desfazer
-uma marcação — mesmo que ela continue na planilha.
+**Sintoma relatado:** "se removo durante a avaliação, a penalidade não é
+removida do valor" — a tabela "MINHAS MARCAÇÕES NESTE CANDIDATO" aparecia
+vazia mesmo com PENALIDADES/MF já contando marcações, então não havia como
+removê-las pela tela.
 
 **Causa:** a lista `minhasMarcacoes` (variável em memória, `avaliacao.html`)
-é zerada a cada troca de candidato/recarregamento; ela nunca foi lida de
-volta da planilha.
+era zerada a cada troca de candidato/recarregamento; nunca foi lida de volta
+da planilha — então qualquer marcação feita antes de trocar de candidato, ou
+por outra aba/aparelho, ficava contada na nota mas invisível (e irremovível)
+na tela.
 
-**Correção combinada:**
-- A tabela "MINHAS MARCAÇÕES NESTE CANDIDATO" passa a ser alimentada pelo
+**Correção (`js/utils.js`, `avaliacao.html`, `dashboard.html`):**
+- A tabela "MINHAS MARCAÇÕES NESTE CANDIDATO" agora é alimentada pelo
   **polling** (`data.registros` filtrado por `candidatoId` selecionado +
-  `avaliador` desta sessão), não mais por uma lista em memória — assim ela
-  **sobrevive a recarregar a página**.
+  `avaliador` desta sessão) somado ao que ainda está na fila local
+  (marcado agora mesmo, aguardando envio) — sobrevive a recarregar a
+  página e mostra também o que veio de outro aparelho.
+- `iniciarPolling()` passou a devolver `{ atualizarAgora, parar }` em vez só
+  do ID do `setInterval`; marcar/remover chama `atualizarAgora()` na hora,
+  então a tabela e o "Situação Geral" (PENALIDADES/MF) refletem a remoção
+  na hora — sem esperar os até 12s do próximo ciclo automático.
+- `AppUtils.penaltyByNome()` (novo) resolve a penalidade pelo NOME gravado
+  em REGISTROS — `penaltyByKey()` não servia porque a planilha guarda o
+  nome, não a key.
 - O botão "Remover" continua chamando `AppUtils.removerPenalidade(ts)` (já
   existe, sem PIN), **sempre com `confirm()`** antes de remover.
-- Por desenho, cada avaliador só remove **as próprias marcações** naquele
-  candidato — evita apagar por engano o que outro avaliador marcou.
-- Para corrigir a marcação de **outro** avaliador (ex.: quem marcou já foi
-  embora), o Chefe ganha um botão **Remover** em cada linha do "Log de
-  Auditoria" do `dashboard.html`, chamando a mesma `removerPenalidade(ts)`
-  com confirmação — tela já protegida por PIN.
+- O Chefe ganhou um botão **Remover** em cada linha do "Log de Auditoria"
+  do `dashboard.html`, chamando a mesma `removerPenalidade(ts)` com
+  confirmação — tela já protegida por PIN — para corrigir a marcação de
+  **outro** avaliador (ex.: quem marcou já foi embora).
+- Verificado com Playwright (`teste_remover.js`): marcação pré-existente na
+  planilha aparece na tabela ao selecionar o candidato; remover derruba a
+  linha e o total PENALIDADES/MF no mesmo ciclo, sem esperar o polling.
+
+### 2b. Limpeza de dados de teste em REGISTROS
+
+Adicionada `limparRegistrosDeTeste()` em `apps_script/Code.gs` — função de
+manutenção, **não** exposta pelo `doPost` (só roda manualmente pelo editor
+do Apps Script: selecionar a função ao lado de "Executar" → Executar). Apaga
+todas as linhas de `REGISTROS` (mantém o cabeçalho), sem tocar em
+`CANDIDATOS` nem `RESULTADOS`.
 
 ### 3. ✅ Valores do edital 047/2026 transcritos — resta a fórmula da MF
 

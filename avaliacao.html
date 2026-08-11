@@ -131,10 +131,8 @@ tailwind.config = { theme: { extend: {
   var candidatoId = '';
   var candidatoNome = '';
   var ultimoAgregado = {}; // id -> objeto agregado (para a Situação Geral)
-
-  // Marcações feitas por ESTE avaliador nesta aba, para o candidato atual
-  // (permite desfazer sem depender de reler a planilha)
-  var minhasMarcacoes = []; // [{ts, key}]
+  var ultimosRegistros = []; // última leitura de REGISTROS (via polling)
+  var polling = null; // preenchido abaixo, com .atualizarAgora()
 
   /* ---- Botões de penalidade gerados da TABELA_PENALIDADES ---- */
   var estilos = [
@@ -159,11 +157,11 @@ tailwind.config = { theme: { extend: {
 
       btn.disabled = true;
       try {
-        var ts = await AppUtils.marcarPenalidade({
+        await AppUtils.marcarPenalidade({
           avaliador: avaliador, candidatoId: candidatoId, candidato: candidatoNome, penaltyKey: p.key
         });
-        minhasMarcacoes.push({ ts: ts, key: p.key, hora: new Date().toLocaleTimeString('pt-BR') });
         renderMinhasMarcacoes();
+        if (polling) polling.atualizarAgora();
       } finally {
         btn.disabled = false;
       }
@@ -177,26 +175,43 @@ tailwind.config = { theme: { extend: {
     document.getElementById('aviso-selecione').classList.toggle('hidden', habilitar);
   }
 
-  /* ---- Minhas marcações (desfazer) ---- */
+  /* ---- Minhas marcações (desfazer) ----
+     Fonte de verdade: o que a planilha (REGISTROS, via polling) tem para
+     este avaliador + este candidato, somado ao que ainda está na fila
+     local (marcado agora mesmo, aguardando envio). Nunca uma lista só de
+     memória — senão trocar de candidato, recarregar a página ou marcar em
+     outro aparelho deixava a marcação contada na nota mas invisível (e
+     irremovível) aqui. */
+  function minhasMarcacoesAtuais() {
+    if (!candidatoId) return [];
+    var pendentes = AppUtils.lerFila()
+      .filter(function (d) { return d.tipo === 'penalidade' && d.candidatoId === candidatoId && d.avaliador === avaliador; })
+      .map(function (d) { return { ts: d.ts, tipoPenalidade: d.tipoPenalidade, dataHora: d.dataHora, pendente: true }; });
+    var confirmadas = ultimosRegistros
+      .filter(function (r) { return r.candidatoId === candidatoId && r.avaliador === avaliador; })
+      .map(function (r) { return { ts: r.ts, tipoPenalidade: r.tipoPenalidade, dataHora: r.dataHora, pendente: false }; });
+    return pendentes.concat(confirmadas).sort(function (a, b) { return b.ts < a.ts ? -1 : (b.ts > a.ts ? 1 : 0); });
+  }
+
   function renderMinhasMarcacoes() {
     var tbody = document.getElementById('log-table-body');
     tbody.textContent = '';
-    minhasMarcacoes.slice().reverse().forEach(function (o) {
-      var idx = minhasMarcacoes.indexOf(o);
-      var p = AppUtils.penaltyByKey(o.key);
-      var tr = el('tr', 'border-b border-outline-variant row-animate bg-white');
-      tr.appendChild(el('td', 'px-3 py-3 uppercase', p ? p.nome : o.key));
-      tr.appendChild(el('td', 'px-3 py-3 font-normal opacity-70', o.hora));
+    minhasMarcacoesAtuais().forEach(function (o) {
+      var p = AppUtils.penaltyByNome(o.tipoPenalidade);
+      var tr = el('tr', 'border-b border-outline-variant row-animate bg-white' + (o.pendente ? ' opacity-60' : ''));
+      tr.appendChild(el('td', 'px-3 py-3 uppercase', (p ? p.nome : o.tipoPenalidade) + (o.pendente ? ' (enviando…)' : '')));
+      tr.appendChild(el('td', 'px-3 py-3 font-normal opacity-70', o.dataHora || ''));
       tr.appendChild(el('td', 'px-3 py-3 text-center text-error font-black',
         p && AppUtils.isEliminatoria(p) ? 'ELIM.' : (p ? '-' + p.pontos : '')));
       var td = el('td', 'px-3 py-3 text-right');
       var btnRem = el('button', 'text-[9px] underline uppercase font-black hover:text-error', 'Remover');
       btnRem.addEventListener('click', async function () {
+        if (!confirm('Remover esta marcação (' + (p ? p.nome : o.tipoPenalidade) + ')?')) return;
         btnRem.disabled = true;
         try {
           await AppUtils.removerPenalidade(o.ts);
-          minhasMarcacoes.splice(idx, 1);
           renderMinhasMarcacoes();
+          if (polling) polling.atualizarAgora();
         } catch (e) {
           alert('Falha ao remover: ' + e.message);
           btnRem.disabled = false;
@@ -213,7 +228,6 @@ tailwind.config = { theme: { extend: {
     candidatoId = id;
     var opt = selectCandidato.querySelector('option[value="' + id + '"]');
     candidatoNome = opt ? (opt.dataset.nome || opt.textContent) : '';
-    minhasMarcacoes = [];
     renderMinhasMarcacoes();
     habilitarBotoes(!!id);
     document.getElementById('bloco-situacao').classList.toggle('hidden', !id);
@@ -265,13 +279,15 @@ tailwind.config = { theme: { extend: {
     }
   }
 
-  AppUtils.iniciarPolling(function (data) {
+  polling = AppUtils.iniciarPolling(function (data) {
     if (!data) return;
     atualizarDropdown(data.candidatos);
     var porId = {};
     data.agregado.forEach(function (c) { porId[c.id] = c; });
     ultimoAgregado = porId;
+    ultimosRegistros = data.registros || [];
     atualizarSituacao();
+    renderMinhasMarcacoes();
   });
 })();
 </script>
