@@ -288,11 +288,20 @@
     var vazio = el('option', null, '— escolher candidato —');
     vazio.value = '';
     sel.appendChild(vazio);
-    dados.ranking.forEach(function (c, i) {
-      var o = el('option', null, (i + 1) + 'º  ' + c.nome + (c.matricula ? '  (' + c.matricula + ')' : ''));
-      o.value = c.id;
-      sel.appendChild(o);
-    });
+
+    // Lista em ordem alfabética — mais fácil achar um nome entre dezenas de
+    // candidatos do que rolar por posição no ranking. O número exibido
+    // continua sendo a posição real na classificação (dados.ranking já vem
+    // ordenado por MF); só a ORDEM da lista muda, não o número de cada um.
+    dados.ranking
+      .map(function (c, i) { return { c: c, pos: i + 1 }; })
+      .sort(function (a, b) { return (a.c.nome || '').localeCompare(b.c.nome || ''); })
+      .forEach(function (item) {
+        var c = item.c;
+        var o = el('option', null, item.pos + 'º  ' + c.nome + (c.matricula ? '  (' + c.matricula + ')' : ''));
+        o.value = c.id;
+        sel.appendChild(o);
+      });
     sel.value = idAtual;
   }
 
