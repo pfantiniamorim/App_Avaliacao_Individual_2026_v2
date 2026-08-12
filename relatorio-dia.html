@@ -266,6 +266,17 @@
     return cat + (r.gbmot && cat.toUpperCase().indexOf('GBMOT') < 0 ? ' · GBMOT' : '');
   }
 
+  // A unidade do edital inclui "DIREN" (Diretoria de Ensino) — no
+  // relatório diário, a pedido, sai desta linha do cabeçalho. Separar
+  // pelos "·" e filtrar o token, em vez de um regex sobre o texto
+  // inteiro, evita sobrar um separador solto (ex.: "CBMDF ·GBMOT").
+  function unidadeSemDiren(u) {
+    return String(u || '').split('·')
+      .map(function (p) { return p.trim(); })
+      .filter(function (p) { return p && p.toUpperCase() !== 'DIREN'; })
+      .join(' · ');
+  }
+
   function render() {
     var folha = document.getElementById('folha');
     folha.textContent = '';
@@ -276,7 +287,7 @@
 
     var cab = el('div', 'cabecalho');
     cab.appendChild(el('h1', null, 'Relatório Diário do ' + (ed.prova || 'Teste Profissional Prático')));
-    cab.appendChild(el('p', null, (ed.unidade || '') + ' — ' + (ed.curso || '')));
+    cab.appendChild(el('p', null, unidadeSemDiren(ed.unidade) + ' — ' + (ed.curso || '')));
     cab.appendChild(el('p', 'edital', (ed.numero || '') + ' · Local: ' + (ed.local || '') +
       ' · Viatura: ' + (ed.viatura || '')));
     cab.appendChild(el('p', 'edital', 'SESSÃO DE ' + dataExtenso(dataAlvo).toUpperCase()));
@@ -307,7 +318,6 @@
           r.tempo || '—',
           q.pontuacaoTempo === null || q.pontuacaoTempo === undefined ? '—' : n2(q.pontuacaoTempo),
           '-' + (q.pontosPen || 0), resumoPenalidades(r.detalhe),
-          r.inferido ? 'inferida' : 'registrada',
           q.eliminado ? 'ELIMINADO' : (q.mf === null || q.mf === undefined ? '—' : n2(q.mf)),
         ]);
         classes.push(q.eliminado ? 'elim' : '');
@@ -315,21 +325,15 @@
       tabela(folha, [{ t: '#', num: true }, { t: 'Hora', num: true }, 'Nome de guerra',
         { t: 'Matrícula', num: true }, 'Categoria', { t: 'Tempo', num: true },
         { t: 'Pts tempo', num: true }, { t: 'Penal.', num: true }, 'Infrações apuradas',
-        { t: 'Data exec.', num: true }, { t: 'MF', num: true }], linhas, classes);
+        { t: 'MF', num: true }], linhas, classes);
 
-      var temInferido = a.executaram.some(function (r) { return r.inferido; });
       folha.appendChild(el('p', 'nota-rodape',
         'Hora = primeira infração registrada pela banca. Candidato que executa sem nenhuma infração não gera ' +
-        'marcação de horário; sua execução é confirmada pelo tempo lançado em RESULTADOS.' +
-        (temInferido
-          ? ' “Data exec. = inferida”: execução anterior a 11/08/2026, quando a planilha ainda não carimbava a ' +
-            'hora do lançamento do tempo. Nesses casos a data foi deduzida do fato de o candidato já ter tempo ' +
-            'apurado antes da sua faixa agendada — confirmar com a banca antes de homologar.'
-          : '')));
+        'marcação de horário; sua execução é confirmada pelo tempo lançado em RESULTADOS.'));
     }
 
     // Bloco 2 — adiantados
-    folha.appendChild(el('h2', null, 'Candidatos adiantados (executaram fora da data agendada)'));
+    folha.appendChild(el('h2', null, 'Candidatos adiantados (motivos pessoais)'));
     if (!a.adiantados.length) {
       folha.appendChild(el('p', 'vazio', 'Nenhum candidato adiantado nesta data.'));
     } else {
@@ -343,7 +347,7 @@
     }
 
     // Bloco 3 — faltantes
-    folha.appendChild(el('h2', null, 'Candidatos agendados que NÃO executaram (faltantes)'));
+    folha.appendChild(el('h2', null, 'Candidatos agendados que NÃO executaram'));
     if (!a.faltantes.length) {
       folha.appendChild(el('p', 'vazio', 'Nenhum faltante — todos os agendados executaram o TPP.'));
     } else {
@@ -367,7 +371,7 @@
     var doc = AppDocx.novo();
 
     doc.titulo('Relatório Diário do ' + (ed.prova || 'Teste Profissional Prático'));
-    doc.subtitulo((ed.unidade || '') + ' — ' + (ed.curso || ''));
+    doc.subtitulo(unidadeSemDiren(ed.unidade) + ' — ' + (ed.curso || ''));
     doc.subtitulo((ed.numero || '') + ' · Local: ' + (ed.local || '') + ' · Viatura: ' + (ed.viatura || ''));
     doc.subtitulo('Sessão de ' + dataExtenso(dataAlvo));
 
@@ -376,22 +380,22 @@
       ['Candidatos que executaram o TPP', String(a.executaram.length)],
       ['Agendados para a data', String(a.agendadosDoDia)],
       ['Vagas ofertadas na data', String(a.vagasDoDia)],
-      ['Adiantados (fora da data agendada)', String(a.adiantados.length)],
+      ['Adiantados (motivos pessoais)', String(a.adiantados.length)],
       ['Faltantes', String(a.faltantes.length)],
       ['Falta executar (geral)', a.faltamNoTotal + ' de ' + a.totalAtivos],
     ]);
 
     doc.secao('Candidatos que executaram o TPP');
-    var linhas = [['#', 'Hora', 'Nome de guerra', 'Matrícula', 'Categoria', 'Tempo', 'Pts tempo', 'Penal.', 'Data exec.', 'MF']];
+    var linhas = [['#', 'Hora', 'Nome de guerra', 'Matrícula', 'Categoria', 'Tempo', 'Pts tempo', 'Penal.', 'MF']];
     a.executaram.forEach(function (r, i) {
       var q = r.resultado || {};
       linhas.push([String(i + 1), r.hora || '—', r.nome, String(r.matricula),
         rotuloCategoria(r), r.tempo || '—',
         q.pontuacaoTempo === null || q.pontuacaoTempo === undefined ? '—' : n2(q.pontuacaoTempo),
-        '-' + (q.pontosPen || 0), r.inferido ? 'inferida' : 'registrada',
+        '-' + (q.pontosPen || 0),
         q.eliminado ? 'ELIMINADO' : (q.mf === null || q.mf === undefined ? '—' : n2(q.mf))]);
     });
-    doc.tabela(linhas, { cabecalho: true, larguras: [4, 8, 21, 10, 12, 8, 8, 7, 10, 12], centradas: [0, 1, 3, 5, 6, 7, 8, 9] });
+    doc.tabela(linhas, { cabecalho: true, larguras: [4, 9, 24, 11, 14, 9, 9, 8, 12], centradas: [0, 1, 3, 5, 6, 7, 8] });
 
     doc.secao('Infrações apuradas por candidato');
     var det = [['Nome de guerra', 'Infrações', 'Total de pontos']];
@@ -400,7 +404,7 @@
     });
     doc.tabela(det, { cabecalho: true, larguras: [26, 58, 16], centradas: [2] });
 
-    doc.secao('Candidatos adiantados (executaram fora da data agendada)');
+    doc.secao('Candidatos adiantados (motivos pessoais)');
     if (!a.adiantados.length) {
       doc.paragrafo('Nenhum candidato adiantado nesta data.');
     } else {
@@ -413,7 +417,7 @@
       doc.tabela(ad, { cabecalho: true, larguras: [26, 13, 15, 18, 13, 15], centradas: [1, 4, 5] });
     }
 
-    doc.secao('Candidatos agendados que NÃO executaram (faltantes)');
+    doc.secao('Candidatos agendados que NÃO executaram');
     if (!a.faltantes.length) {
       doc.paragrafo('Nenhum faltante — todos os agendados executaram o TPP.');
     } else {
@@ -428,12 +432,6 @@
     doc.paragrafo('A coluna Hora corresponde à primeira infração registrada pela banca. ' +
       'Candidato que executou sem infração não gera marcação de horário; sua execução é ' +
       'confirmada pelo tempo lançado na aba RESULTADOS.');
-    if (a.executaram.some(function (r) { return r.inferido; })) {
-      doc.paragrafo('Data exec. = "inferida": execução anterior a 11/08/2026, quando a planilha ainda não ' +
-        'carimbava a hora do lançamento do tempo. Nesses casos a data foi deduzida do fato de o candidato já ' +
-        'possuir tempo apurado antes da sua faixa agendada — recomenda-se confirmação com a banca antes da ' +
-        'homologação. A partir de 11/08/2026 a data de execução passou a ser registrada automaticamente.');
-    }
     doc.paragrafo('Emitido em ' + new Date().toLocaleString('pt-BR') +
       ' a partir da planilha Selecao_Condutores_2026.');
 
