@@ -289,16 +289,14 @@
     vazio.value = '';
     sel.appendChild(vazio);
 
-    // Lista em ordem alfabética — mais fácil achar um nome entre dezenas de
-    // candidatos do que rolar por posição no ranking. O número exibido
-    // continua sendo a posição real na classificação (dados.ranking já vem
-    // ordenado por MF); só a ORDEM da lista muda, não o número de cada um.
+    // Lista em ordem alfabética, sem a posição no ranking: esta tela é
+    // usada de frente para o candidato, então o dropdown não pode expor a
+    // classificação de todo mundo antes da hora — só nome e matrícula.
     dados.ranking
-      .map(function (c, i) { return { c: c, pos: i + 1 }; })
-      .sort(function (a, b) { return (a.c.nome || '').localeCompare(b.c.nome || ''); })
-      .forEach(function (item) {
-        var c = item.c;
-        var o = el('option', null, item.pos + 'º  ' + c.nome + (c.matricula ? '  (' + c.matricula + ')' : ''));
+      .slice()
+      .sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); })
+      .forEach(function (c) {
+        var o = el('option', null, c.nome + (c.matricula ? '  (' + c.matricula + ')' : ''));
         o.value = c.id;
         sel.appendChild(o);
       });
