@@ -56,6 +56,30 @@ tailwind.config = { theme: { extend: {
     </p>
   </section>
 
+  <!-- Candidatos ausentes: agendados numa faixa cujo horário já passou e sem tempo lançado -->
+  <section class="border-2 border-error bg-white hidden" id="ausentes-secao">
+    <div class="bg-error text-white px-4 py-3 flex justify-between items-center">
+      <h2 class="font-black uppercase tracking-tighter text-lg">Candidatos Ausentes</h2>
+      <span class="text-[10px] font-bold uppercase tracking-widest text-white/80" id="ausentes-resumo">--</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-low">
+            <th class="p-3 font-black text-[10px] uppercase tracking-widest border-r border-outline-variant">Candidato</th>
+            <th class="p-3 font-black text-[10px] uppercase tracking-widest border-r border-outline-variant text-center">Matrícula</th>
+            <th class="p-3 font-black text-[10px] uppercase tracking-widest border-r border-outline-variant text-center hidden md:table-cell">Categoria</th>
+            <th class="p-3 font-black text-[10px] uppercase tracking-widest text-center">Faixa perdida</th>
+          </tr>
+        </thead>
+        <tbody id="ausentes-body"></tbody>
+      </table>
+    </div>
+    <p class="p-3 text-[10px] font-bold uppercase text-secondary tracking-widest bg-surface-container-low">
+      Agendado(s) numa faixa cujo horário já passou, sem tempo lançado até agora. Some desta lista assim que o tempo for registrado.
+    </p>
+  </section>
+
   <!-- Distribuição das vagas do curso (quadro do edital) -->
   <section class="border-2 border-black bg-white">
     <div class="bg-black text-white px-4 py-3 flex justify-between items-center">
@@ -121,8 +145,101 @@ tailwind.config = { theme: { extend: {
   var el = AppUtils.el;
   var selecionado = null;
   var rankingAtual = [];
+  var faixaPorId = {};  // id da faixa -> {dataISO, inicio, fim}
+  var agendadoDe = {};  // matrícula -> id da faixa (só status ATIVO)
 
   var rotulos = { tempo: 'menor tempo', penalidades: 'menos penalidades', antiguidade: 'antiguidade militar' };
+
+  /* ---------------- Ausentes ----------------
+     "Ausente" é diferente de "ainda não avaliado": só marca quem tinha
+     uma faixa agendada e o HORÁRIO DELA JÁ PASSOU, sem tempo lançado até
+     agora. Candidato agendado para daqui a duas horas continua mostrando
+     "--" normalmente — não é ausência, é só ainda não ter chegado a vez. */
+  function paraISO(valor) {
+    var v = String(valor || '').trim();
+    var br = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (br) return br[3] + '-' + br[2] + '-' + br[1];
+    var iso = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return iso ? iso[0] : v;
+  }
+
+  function hojeISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function horaAgoraHHMM() {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function faixaVencida(faixa) {
+    if (!faixa || !faixa.dataISO) return false;
+    var hoje = hojeISO();
+    if (faixa.dataISO < hoje) return true;
+    if (faixa.dataISO === hoje) return horaAgoraHHMM() > faixa.fim;
+    return false;
+  }
+
+  function indexarAgenda(faixas, agendamentos) {
+    faixaPorId = {};
+    (faixas || []).forEach(function (f) {
+      faixaPorId[String(f.ID).trim()] = {
+        dataISO: paraISO(f.DATA), inicio: String(f.INICIO || '').trim(), fim: String(f.FIM || '').trim()
+      };
+    });
+    agendadoDe = {};
+    (agendamentos || []).forEach(function (a) {
+      if (String(a.STATUS || '').toUpperCase() !== 'ATIVO') return;
+      agendadoDe[String(a.MATRICULA).trim()] = String(a.FAIXAID || '').trim();
+    });
+  }
+
+  // Marca r.ausente e r.faixaPerdida em cada linha do ranking atual.
+  function marcarAusentes() {
+    rankingAtual.forEach(function (r) {
+      r.ausente = false;
+      r.faixaPerdida = null;
+      if (r.tempo) return; // já executou
+      var faixaId = agendadoDe[r.matricula] || agendadoDe[r.id];
+      if (!faixaId) return; // nunca agendou — não é "ausente", é sem agenda
+      var faixa = faixaPorId[faixaId];
+      if (faixa && faixaVencida(faixa)) {
+        r.ausente = true;
+        r.faixaPerdida = faixa;
+      }
+    });
+  }
+
+  function fmtFaixaCurta(faixa) {
+    var p = String(faixa.dataISO).split('-');
+    if (p.length < 3) return faixa.dataISO + ' ' + faixa.inicio + '–' + faixa.fim;
+    return p[2] + '/' + p[1] + ' ' + faixa.inicio + '–' + faixa.fim;
+  }
+
+  function renderAusentes() {
+    var secao = document.getElementById('ausentes-secao');
+    var tbody = document.getElementById('ausentes-body');
+    tbody.textContent = '';
+    var ausentes = rankingAtual.filter(function (r) { return r.ausente; });
+
+    secao.classList.toggle('hidden', ausentes.length === 0);
+    if (!ausentes.length) return;
+
+    document.getElementById('ausentes-resumo').textContent =
+      ausentes.length + ' AUSENTE' + (ausentes.length === 1 ? '' : 'S');
+
+    ausentes
+      .sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); })
+      .forEach(function (r, i) {
+        var tr = el('tr', 'border-b border-outline-variant ' + (i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low'));
+        tr.appendChild(el('td', 'p-3 font-black text-sm uppercase', r.nome));
+        tr.appendChild(el('td', 'p-3 text-center font-bold text-xs uppercase text-secondary', r.matricula || '—'));
+        tr.appendChild(el('td', 'p-3 text-center font-bold text-xs uppercase text-secondary hidden md:table-cell', r.categoria || '—'));
+        tr.appendChild(el('td', 'p-3 text-center font-black text-xs uppercase text-error', fmtFaixaCurta(r.faixaPerdida)));
+        tbody.appendChild(tr);
+      });
+  }
 
   function render() {
     var tbody = document.getElementById('ranking-body');
@@ -147,13 +264,14 @@ tailwind.config = { theme: { extend: {
     rankingAtual.forEach(function (r, idx) {
       var elim = r.resultado.eliminado;
       var tr = el('tr', 'border-b-2 border-black/10 cursor-pointer hover:bg-surface-container-highest transition-colors ' +
-        (idx % 2 === 0 ? 'bg-white' : 'bg-surface-container-low') +
+        (r.ausente ? 'bg-error/5' : (idx % 2 === 0 ? 'bg-white' : 'bg-surface-container-low')) +
         (selecionado === r.id ? ' outline outline-2 outline-black' : '') +
         (elim ? ' opacity-60' : ''));
 
       var tdPos = el('td', 'p-3 text-center');
       tdPos.appendChild(el('span', 'inline-block w-8 h-8 leading-8 font-black text-sm ' +
-        (!elim && idx < 3 ? medalhas[idx] + ' text-black' : ''), elim ? '—' : (idx + 1) + 'º'));
+        (!elim && !r.ausente && idx < 3 ? medalhas[idx] + ' text-black' : ''),
+        (elim || r.ausente) ? '—' : (idx + 1) + 'º'));
       tr.appendChild(tdPos);
 
       tr.appendChild(el('td', 'p-3 font-black text-sm uppercase', r.nome));
@@ -167,8 +285,8 @@ tailwind.config = { theme: { extend: {
 
       tr.appendChild(el('td', 'p-3 text-center font-black text-sm', r.tempo || '--:--'));
       tr.appendChild(el('td', 'p-3 text-center font-black text-sm ' + (r.resultado.pontosPen > 0 ? 'text-error' : ''), '-' + r.resultado.pontosPen));
-      tr.appendChild(el('td', 'p-3 text-center font-black text-lg ' + (elim ? 'text-error' : ''),
-        elim ? 'ELIM.' : (r.resultado.mf === null ? '--' : r.resultado.mf.toFixed(2))));
+      tr.appendChild(el('td', 'p-3 text-center font-black text-lg ' + ((elim || r.ausente) ? 'text-error' : ''),
+        elim ? 'ELIM.' : (r.ausente ? 'AUSENTE' : (r.resultado.mf === null ? '--' : r.resultado.mf.toFixed(2)))));
 
       tr.addEventListener('click', function () {
         selecionado = r.id;
@@ -275,13 +393,34 @@ tailwind.config = { theme: { extend: {
     }
   }
 
+  // Faixas/Agendamentos são do app de agendamento — lidos à parte do
+  // polling das 3 abas de avaliação, e recarregados periodicamente porque
+  // remarcações (troca de horário) podem mudar quem está agendado onde
+  // enquanto esta tela fica aberta.
+  function atualizarAgenda() {
+    Promise.all([
+      AppUtils.baixarAba(CFG.CSV_FAIXAS_URL).catch(function () { return null; }),
+      AppUtils.baixarAba(CFG.CSV_AGENDAMENTOS_URL).catch(function () { return null; })
+    ]).then(function (r) {
+      if (r[0] === null || r[1] === null) return; // falha de leitura: mantém o que já tinha
+      indexarAgenda(r[0], r[1]);
+      marcarAusentes();
+      render();
+      renderAusentes();
+    });
+  }
+  atualizarAgenda();
+  setInterval(atualizarAgenda, 5 * 60000); // 5 min — Faixas/Agendamentos mudam bem menos que penalidades
+
   AppUtils.iniciarPolling(function (data) {
     document.getElementById('ranking-atualizado').textContent =
       !data ? 'SEM FONTE DE DADOS' : 'ATUALIZADO ÀS ' + AppUtils.horaAgora();
     if (!data) return;
     rankingAtual = data.ranking;
+    marcarAusentes();
     render();
     renderVagas();
+    renderAusentes();
   });
 })();
 </script>

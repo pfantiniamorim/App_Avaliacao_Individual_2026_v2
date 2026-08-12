@@ -2,6 +2,25 @@
 
 Backlog técnico para retomar em sessões futuras. Atualizado em 2026-08-05.
 
+## 2026-08-12 — Candidatos Ausentes em ranking.html
+
+Nova seção "Candidatos Ausentes", visível só quando há pelo menos um.
+"Ausente" ≠ "ainda não avaliado": só marca quem tinha faixa agendada
+(`Agendamentos`, status ATIVO) cujo **horário já passou** (data anterior a
+hoje, ou faixa de hoje com `fim` menor que a hora atual) e continua sem
+tempo lançado em `RESULTADOS`. Candidato agendado para daqui a duas horas
+continua mostrando `--` normalmente.
+
+- Lê `Faixas`/`Agendamentos` (abas do agendamento) via `AppUtils.baixarAba`,
+  recarregadas a cada 5 min — remarcação de horário pode mudar quem está
+  agendado onde enquanto a tela fica aberta numa TV/monitor.
+- Linha ausente na tabela principal: POS vira `—` (como eliminado) e a
+  coluna MF mostra `AUSENTE` em vez de `--`.
+- Verificado com relógio fixo via `page.clock` do Playwright (evita teste
+  frágil perto da meia-noite): agenda vencida por data, agenda de hoje
+  vencida por hora, faixa de hoje ainda não chegada, sem agendamento,
+  e já executado — os 5 casos resolvem certo.
+
 ## 2026-08-05 — Sincronização com o app de agendamento (3º CECEM/2026)
 
 O edital nº 047/2026-CBMDF/DIREN/SEITC foi publicado e a planilha
