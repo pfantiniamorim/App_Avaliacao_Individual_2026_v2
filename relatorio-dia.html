@@ -124,15 +124,22 @@
 
   /* ---------------- Apuração do dia ----------------
      A prova de um candidato "aconteceu no dia X" quando existe marcação
-     dele em REGISTROS com data X. Quem executou sem levar nenhuma
-     penalidade não deixa rastro em REGISTROS — para esses, o dia é
-     inferido pela faixa agendada. Fica registrado na coluna Origem, para
-     a Comissão saber o que é medido e o que é inferido. */
+     dele em REGISTROS com data X, ou o carimbo DATA_HORA de RESULTADOS
+     aponta para X — os dois são medidos, nunca adivinhados.
+
+     ⚠ Existiu uma 3ª regra aqui (inferir o dia comparando a faixa
+     agendada com a data do relatório) e ela causava contagem em DOBRO:
+     "tem tempo, sem carimbo, faixa agendada é depois deste dia" é
+     verdadeiro para TODO dia anterior ao dia real de execução, não só
+     para um — por isso THIAGO e JAIRO JUNIOR (que executaram de verdade
+     em 12/08, com hora real de REGISTROS) apareciam TAMBÉM no relatório
+     de 11/08 com os mesmos pontos e MF, via essa regra. Removida em
+     12/08/2026. Quem tem tempo mas nenhum dos dois carimbos vai para
+     `semData` — nunca é atribuído a um dia sem prova. */
   function apurar() {
-    var idsDoDia = {}, faixaData = {};
+    var idsDoDia = {};
     faixas.forEach(function (f) {
       var id = String(f.ID).trim(), iso = paraISO(f.DATA);
-      faixaData[id] = iso;
       if (iso === dataAlvo) idsDoDia[id] = true;
     });
 
@@ -142,9 +149,14 @@
       agendadoDe[String(a.MATRICULA).trim()] = String(a.FAIXAID || '').trim();
     });
 
-    // Hora da 1ª marcação de cada candidato NO dia escolhido
-    var horaNoDia = {};
+    // Hora da 1ª marcação de cada candidato NO dia escolhido, e — à parte —
+    // se ele tem QUALQUER marcação em REGISTROS, em qualquer dia. A segunda
+    // lista existe para "sem data" não pegar quem já tem o dia sabido por
+    // uma marcação em OUTRO dia: aí o dia é conhecido (só não é este), e a
+    // linha certa é sumir deste relatório, não entrar em "sem data".
+    var horaNoDia = {}, temRegistroEmAlgumDia = {};
     (dados.registros || []).forEach(function (r) {
+      if (r.candidatoId) temRegistroEmAlgumDia[r.candidatoId] = true;
       var partes = String(r.dataHora || '').split(/,?\s+/);
       var iso = paraISO(partes[0]);
       if (iso !== dataAlvo) return;
@@ -164,7 +176,7 @@
       detalhe[r.candidatoId][p.nome] = (detalhe[r.candidatoId][p.nome] || 0) + 1;
     });
 
-    var executaram = [], faltantes = [], adiantados = [];
+    var executaram = [], faltantes = [], adiantados = [], semData = [];
 
     Object.keys(porId).forEach(function (id) {
       var c = porId[id];
@@ -174,32 +186,30 @@
       var temTempo = !!c.tempo;
       var marcouHoje = !!horaNoDia[id];
 
-      /* Em que dia este candidato executou?
-         1. Se marcou penalidade, a data da marcação decide — é medida.
-         2. Senão, vale o carimbo DATA_HORA de RESULTADOS (gravado desde
-            11/08/2026 junto com o tempo) — também é medido.
-         3. Sem os dois (linhas antigas de RESULTADOS, sem carimbo), só
-            resta inferir: tem tempo lançado e a faixa agendada é de uma
-            data POSTERIOR a esta ⇒ só pode ter se adiantado. Vai para o
-            relatório com a origem marcada como inferida, nunca calada. */
       var diaDoCarimbo = c.tempoEm ? paraISO(String(c.tempoEm).split(/,?\s+/)[0]) : '';
       var carimbadoHoje = diaDoCarimbo === dataAlvo;
-      var dataDaFaixa = faixaData[faixa] || '';
-      var inferido = !marcouHoje && !diaDoCarimbo && temTempo && !eraDoDia &&
-        dataDaFaixa && dataDaFaixa > dataAlvo;
 
-      if (marcouHoje || carimbadoHoje || (temTempo && eraDoDia && !diaDoCarimbo) || inferido) {
+      if (marcouHoje || carimbadoHoje) {
         var reg = {
           id: id, nome: c.nome, matricula: c.matricula || id,
           categoria: c.categoria || '', gbmot: c.gbmot,
           hora: horaNoDia[id] || (carimbadoHoje ? (String(c.tempoEm).split(/,?\s+/)[1] || '') : ''),
-          tempo: c.tempo || '', inferido: inferido,
+          tempo: c.tempo || '',
           faixa: faixa || '(sem agendamento)', eraDoDia: eraDoDia,
           resultado: c.resultado, detalhe: detalhe[id] || {},
         };
         executaram.push(reg);
         if (!eraDoDia) adiantados.push(reg);
-      } else if (eraDoDia && !diaDoCarimbo) {
+      } else if (temTempo && !diaDoCarimbo && !temRegistroEmAlgumDia[id]) {
+        // Tem tempo lançado, mas nenhum carimbo (nem RESULTADOS, nem uma
+        // marcação em REGISTROS em QUALQUER dia) aponta para dia nenhum —
+        // linha antiga, de antes do carimbo existir. Nunca vira palpite:
+        // some desta lista de "sem data" só quando alguém confirmar/
+        // corrigir a data na planilha.
+        semData.push({ id: id, nome: c.nome, matricula: c.matricula || id,
+          categoria: c.categoria || '', faixa: faixa || '(sem agendamento)',
+          tempo: c.tempo || '', resultado: c.resultado });
+      } else if (eraDoDia && !temTempo) {
         faltantes.push({ id: id, nome: c.nome, matricula: c.matricula || id,
           categoria: c.categoria || '', faixa: faixa });
       }
@@ -212,6 +222,7 @@
       return a.nome.localeCompare(b.nome);
     });
     faltantes.sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+    semData.sort(function (a, b) { return a.nome.localeCompare(b.nome); });
 
     var totalAtivos = Object.keys(porId).filter(function (i) {
       return porId[i].ativo !== false && porId[i].nome;
@@ -221,7 +232,7 @@
     }).length;
 
     return {
-      executaram: executaram, faltantes: faltantes, adiantados: adiantados,
+      executaram: executaram, faltantes: faltantes, adiantados: adiantados, semData: semData,
       agendadosDoDia: Object.keys(agendadoDe).filter(function (m) { return idsDoDia[agendadoDe[m]]; }).length,
       vagasDoDia: faixas.filter(function (f) { return paraISO(f.DATA) === dataAlvo; })
         .reduce(function (s, f) { return s + (Number(f.VAGASTOTAL) || 0); }, 0),
@@ -297,7 +308,8 @@
     var res = el('div', 'resumo');
     [['Executaram o TPP', a.executaram.length], ['Agendados para o dia', a.agendadosDoDia],
      ['Adiantados', a.adiantados.length], ['Faltantes', a.faltantes.length],
-     ['Falta executar (geral)', a.faltamNoTotal + ' de ' + a.totalAtivos]].forEach(function (par) {
+     ['Falta executar (geral)', a.faltamNoTotal + ' de ' + a.totalAtivos],
+     ['Sem data confirmada', a.semData.length]].forEach(function (par) {
       var d = el('div');
       d.appendChild(el('span', null, par[0]));
       d.appendChild(el('strong', null, String(par[1])));
@@ -355,6 +367,24 @@
         a.faltantes.map(function (r) { return [r.nome, r.matricula, r.categoria, r.faixa]; }));
     }
 
+    // Bloco 4 — sem data confirmada (nunca some em silêncio)
+    if (a.semData.length) {
+      var h2SemData = el('h2', null, 'Execuções sem data confirmada — não pertencem a nenhum dia específico');
+      h2SemData.style.background = '#ba1a1a';
+      folha.appendChild(h2SemData);
+      folha.appendChild(el('p', 'nota-rodape',
+        'Aparece igual em TODOS os relatórios diários até ser corrigido: têm tempo lançado em RESULTADOS, mas ' +
+        'nenhum carimbo (nem penalidade em REGISTROS, nem DATA_HORA) diz em que dia isso aconteceu. Confirme a ' +
+        'data com a banca e ajuste a planilha — o app nunca adivinha isso sozinho.'));
+      tabela(folha, ['Nome de guerra', { t: 'Matrícula', num: true }, 'Categoria', { t: 'Tempo', num: true },
+        'Faixa agendada', { t: 'MF', num: true }],
+        a.semData.map(function (r) {
+          var q = r.resultado || {};
+          return [r.nome, r.matricula, r.categoria, r.tempo || '—', r.faixa,
+            q.eliminado ? 'ELIMINADO' : (q.mf === null || q.mf === undefined ? '—' : n2(q.mf))];
+        }));
+    }
+
     var rod = el('div', 'rodape');
     rod.appendChild(el('p', null, 'Emitido em ' + new Date().toLocaleString('pt-BR') +
       ' · Fonte: planilha Selecao_Condutores_2026 (abas CANDIDATOS, REGISTROS, RESULTADOS, Faixas, Agendamentos)'));
@@ -383,6 +413,7 @@
       ['Adiantados (motivos pessoais)', String(a.adiantados.length)],
       ['Faltantes', String(a.faltantes.length)],
       ['Falta executar (geral)', a.faltamNoTotal + ' de ' + a.totalAtivos],
+      ['Sem data confirmada', String(a.semData.length)],
     ]);
 
     doc.secao('Candidatos que executaram o TPP');
@@ -424,6 +455,20 @@
       var ft = [['Nome de guerra', 'Matrícula', 'Categoria', 'Faixa agendada']];
       a.faltantes.forEach(function (r) { ft.push([r.nome, String(r.matricula), r.categoria, r.faixa]); });
       doc.tabela(ft, { cabecalho: true, larguras: [34, 20, 22, 24], centradas: [1, 3] });
+    }
+
+    if (a.semData.length) {
+      doc.secao('Execuções sem data confirmada — não pertencem a nenhum dia específico');
+      doc.paragrafo('Aparece igual em TODOS os relatórios diários até ser corrigido: têm tempo lançado em ' +
+        'RESULTADOS, mas nenhum carimbo (nem penalidade em REGISTROS, nem DATA_HORA) diz em que dia isso ' +
+        'aconteceu. Confirme a data com a banca e ajuste a planilha — o app nunca adivinha isso sozinho.');
+      var sd = [['Nome de guerra', 'Matrícula', 'Categoria', 'Tempo', 'Faixa agendada', 'MF']];
+      a.semData.forEach(function (r) {
+        var q = r.resultado || {};
+        sd.push([r.nome, String(r.matricula), r.categoria, r.tempo || '—', r.faixa,
+          q.eliminado ? 'ELIMINADO' : (q.mf === null || q.mf === undefined ? '—' : n2(q.mf))]);
+      });
+      doc.tabela(sd, { cabecalho: true, larguras: [26, 13, 15, 12, 19, 15], centradas: [1, 3, 5] });
     }
 
     doc.secao('Observações');
