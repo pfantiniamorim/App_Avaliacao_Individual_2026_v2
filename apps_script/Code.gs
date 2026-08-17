@@ -176,12 +176,28 @@ function removerPorColuna(nomeAba, coluna, valor) {
 function obterAba(nome) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var aba = ss.getSheetByName(nome);
+  var cabecalho = ABAS[nome];
   if (!aba) {
     aba = ss.insertSheet(nome);
-    aba.appendRow(ABAS[nome]);
-  } else if (aba.getLastRow() === 0) {
-    aba.appendRow(ABAS[nome]);
+    aba.appendRow(cabecalho);
+    return aba;
   }
+  if (aba.getLastRow() === 0) {
+    aba.appendRow(cabecalho);
+    return aba;
+  }
+  // Coluna acrescentada depois que a aba já existia (DATA_HORA em RESULTADOS)
+  // fica sem nome no cabeçalho: o CSV entrega a coluna sem chave e o app
+  // nunca a enxerga, por mais que o valor esteja gravado na célula.
+  // Só preenche célula vazia — nome que a banca tenha trocado é preservado.
+  var atual = aba.getRange(1, 1, 1, cabecalho.length).getValues()[0];
+  var faltou = false;
+  var corrigido = cabecalho.map(function (esperado, i) {
+    if (String(atual[i] || '').trim() !== '') return atual[i];
+    faltou = true;
+    return esperado;
+  });
+  if (faltou) aba.getRange(1, 1, 1, cabecalho.length).setValues([corrigido]);
   return aba;
 }
 
