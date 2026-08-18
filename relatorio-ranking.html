@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Relatório de Classificação — TPP 3º CECEM/2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root { --linha: #000; --cinza: #5e5e5e; --claro: #f3f3f4; --erro: #ba1a1a; --ok: #1b5e20; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Public Sans', Arial, sans-serif; background: #e2e2e2; color: #000; padding: 24px 12px; }
+
+  /* Retrato: a classificação tem 8 colunas e cabe em A4 em pé — é também
+     o formato que o SEI espera para peça de processo. */
+  .folha { width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; padding: 14mm 15mm; }
+
+  .barra { display: flex; gap: 8px; justify-content: center; margin: 0 auto 20px; max-width: 210mm; flex-wrap: wrap; }
+  .barra a, .barra button {
+    font: 900 11px 'Public Sans', sans-serif; text-transform: uppercase; letter-spacing: .12em;
+    padding: 12px 18px; border: 2px solid #000; background: #fff; color: #000; cursor: pointer; text-decoration: none;
+  }
+  .barra button { background: #000; color: #fff; }
+
+  h1 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: -.02em; line-height: 1.15; }
+  .cabecalho { border-bottom: 3px solid var(--linha); padding-bottom: 10px; margin-bottom: 12px; }
+  .cabecalho p { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .16em; color: var(--cinza); }
+  .cabecalho .edital { margin-top: 6px; letter-spacing: .05em; }
+
+  h2 { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .18em;
+       background: var(--linha); color: #fff; padding: 5px 8px; margin: 14px 0 7px; }
+  h3 { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em;
+       margin: 10px 0 4px; padding-bottom: 3px; border-bottom: 2px solid var(--linha); }
+  h3 span { float: right; font-weight: 700; color: var(--cinza); letter-spacing: .05em; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid var(--linha); padding: 4px 6px; font-size: 9.5px; text-align: left; vertical-align: top; }
+  th { background: var(--claro); font-weight: 900; text-transform: uppercase; letter-spacing: .05em; font-size: 8.5px; }
+  td.num, th.num { text-align: center; white-space: nowrap; }
+  td.mf { font-weight: 900; }
+  tr.elim td { color: var(--erro); font-weight: 900; }
+  tr.podio td { background: #f7f7f7; }
+
+  .resumo { display: flex; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .resumo div { flex: 1; min-width: 90px; border: 2px solid var(--linha); padding: 7px 9px; }
+  .resumo span { display: block; font-size: 8px; font-weight: 900; text-transform: uppercase;
+                 letter-spacing: .12em; color: var(--cinza); }
+  .resumo strong { font-size: 23px; font-weight: 900; line-height: 1.1; }
+
+  .rodape { margin-top: 8mm; border-top: 1px solid var(--linha); padding-top: 6px;
+            font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--cinza); }
+  .rodape p { margin-bottom: 3px; }
+  .vazio { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--cinza); padding: 8px 0; }
+  .nota-rodape { font-size: 9px; font-weight: 700; color: var(--cinza); margin-top: 5px; line-height: 1.5; }
+  .alerta { font-size: 9px; font-weight: 900; text-transform: uppercase; color: var(--erro); margin-top: 5px; line-height: 1.5; }
+
+  /* Bloco de assinatura da comissão — peça de processo é assinada. */
+  .assinaturas { display: flex; gap: 14mm; margin-top: 12mm; }
+  .assinaturas div { flex: 1; text-align: center; border-top: 1px solid var(--linha); padding-top: 5px; }
+  .assinaturas p { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--cinza); }
+
+  @media print {
+    @page { size: A4 portrait; margin: 0; }
+    body { background: #fff; padding: 0; }
+    .barra { display: none; }
+    /* Badge flutuante do polling: some no papel, como nos demais relatórios. */
+    #status-sync { display: none !important; }
+    .folha { width: auto; min-height: 0; margin: 0; padding: 12mm 13mm; }
+    h2, th, tr.podio td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <a href="ranking.html">&larr; Classificação</a>
+  <button id="btn-docx" type="button">Baixar .docx (SEI)</button>
+  <button id="btn-imprimir" type="button">Imprimir / Salvar PDF</button>
+</div>
+
+<div class="folha" id="folha">
+  <p class="vazio">CARREGANDO…</p>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/docx.js"></script>
+<script>
+(function () {
+  var CFG = window.APP_CONFIG;
+  var el = AppUtils.el;
+
+  var dados = null;      // { candidatos, registros, resultados, agregado, ranking }
+  var faixas = [];       // aba Faixas do app de agendamento
+  var agendamentos = []; // aba Agendamentos idem
+
+  var ROTULO_CRITERIO = { tempo: 'menor tempo', penalidades: 'menos penalidades', antiguidade: 'antiguidade militar' };
+
+  document.getElementById('btn-imprimir').addEventListener('click', function () { window.print(); });
+  document.getElementById('btn-docx').addEventListener('click', baixarDocx);
+
+  function n2(v) { return Number(v).toFixed(2).replace('.', ','); }
+  function mfDe(q) {
+    if (!q) return '—';
+    if (q.eliminado) return 'ELIMINADO';
+    return (q.mf === null || q.mf === undefined) ? '—' : n2(q.mf);
+  }
+
+  function paraISO(valor) {
+    var v = String(valor || '').trim();
+    var br = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (br) return br[3] + '-' + br[2] + '-' + br[1];
+    var iso = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return iso ? iso[0] : v;
+  }
+
+  function hojeISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function horaAgoraHHMM() {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function fmtFaixaCurta(f) {
+    if (!f) return '—';
+    var p = String(f.dataISO).split('-');
+    if (p.length < 3) return f.dataISO;
+    return p[2] + '/' + p[1] + ' ' + f.inicio + '–' + f.fim;
+  }
+
+  /* A coluna CATEGORIA da planilha já traz "GBMOT" para quem concorre às
+     vagas reservadas; repetir o selo geraria "GBMOT · GBMOT". */
+  function rotuloCategoria(r) {
+    var cat = r.categoria || '';
+    return cat + (r.gbmot && cat.toUpperCase().indexOf('GBMOT') < 0 ? ' · GBMOT' : '');
+  }
+
+  function resumoPenalidades(contagens) {
+    var partes = [];
+    (CFG.TABELA_PENALIDADES || []).forEach(function (p) {
+      var qtd = (contagens || {})[p.key] || 0;
+      if (!qtd) return;
+      partes.push(qtd + '× ' + p.nome + (AppUtils.isEliminatoria(p) ? ' (ELIMINATÓRIA)' : ' (-' + qtd * Number(p.pontos) + ')'));
+    });
+    return partes.length ? partes.join('; ') : 'Percurso limpo — sem infrações';
+  }
+
+  /* ---------------- Apuração ----------------
+     "Ausente" segue a mesma régua da tela de classificação: só é ausente
+     quem tinha faixa agendada CUJO HORÁRIO JÁ PASSOU e continua sem tempo
+     lançado. Quem ainda tem faixa pela frente entra em "aguardando", não
+     em ausente — a diferença importa num documento de processo. */
+  function apurar() {
+    var faixaPorId = {};
+    faixas.forEach(function (f) {
+      faixaPorId[String(f.ID).trim()] = {
+        dataISO: paraISO(f.DATA), inicio: String(f.INICIO || '').trim(), fim: String(f.FIM || '').trim()
+      };
+    });
+    var agendadoDe = {};
+    agendamentos.forEach(function (a) {
+      if (String(a.STATUS || '').toUpperCase() !== 'ATIVO') return;
+      agendadoDe[String(a.MATRICULA).trim()] = String(a.FAIXAID || '').trim();
+    });
+
+    function vencida(f) {
+      if (!f || !f.dataISO) return false;
+      var hoje = hojeISO();
+      if (f.dataISO < hoje) return true;
+      return f.dataISO === hoje && horaAgoraHHMM() > f.fim;
+    }
+
+    var ranking = (dados.ranking || []);
+    var classificados = [], eliminados = [], ausentes = [], aguardando = [];
+
+    ranking.forEach(function (r) {
+      var q = r.resultado || {};
+      if (q.eliminado) { eliminados.push(r); return; }
+      if (r.tempo) { classificados.push(r); return; }
+      var f = faixaPorId[agendadoDe[r.matricula] || agendadoDe[r.id]];
+      if (f && vencida(f)) { r.faixaPerdida = f; ausentes.push(r); }
+      else { r.faixaFutura = f || null; aguardando.push(r); }
+    });
+
+    eliminados.sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
+    ausentes.sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
+    aguardando.sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
+
+    return {
+      ranking: ranking, classificados: classificados, eliminados: eliminados,
+      ausentes: ausentes, aguardando: aguardando,
+      vagas: AppUtils.distribuirVagas(ranking),
+      totalAtivos: ranking.length,
+      executaram: ranking.filter(function (r) { return !!r.tempo; }).length
+    };
+  }
+
+  /* ---------------- Render ---------------- */
+  function tabela(pai, cabecalhos, linhas, classesLinha) {
+    var t = el('table');
+    var thead = el('thead'), trh = el('tr');
+    cabecalhos.forEach(function (c) {
+      trh.appendChild(el('th', typeof c === 'object' && c.num ? 'num' : null, typeof c === 'object' ? c.t : c));
+    });
+    thead.appendChild(trh); t.appendChild(thead);
+    var tb = el('tbody');
+    linhas.forEach(function (l, i) {
+      var tr = el('tr', classesLinha && classesLinha[i] ? classesLinha[i] : null);
+      l.forEach(function (v, j) {
+        var c = cabecalhos[j];
+        tr.appendChild(el('td', (typeof c === 'object' && c.num ? 'num' : '') + (j === l.length - 1 ? ' mf' : ''), String(v)));
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); pai.appendChild(t);
+    return t;
+  }
+
+  function render() {
+    var folha = document.getElementById('folha');
+    folha.textContent = '';
+    if (!dados) { folha.appendChild(el('p', 'vazio', 'CARREGANDO…')); return; }
+
+    var ed = CFG.EDITAL || {};
+    var a = apurar();
+
+    var cab = el('div', 'cabecalho');
+    cab.appendChild(el('h1', null, 'Relatório de Classificação — ' + (ed.prova || 'Teste Profissional Prático')));
+    cab.appendChild(el('p', null, (ed.unidade || '') + ' — ' + (ed.cursoExtenso || ed.curso || '')));
+    cab.appendChild(el('p', 'edital', (ed.numero || '') + ' · Local: ' + (ed.local || '') + ' · Viatura: ' + (ed.viatura || '')));
+    folha.appendChild(cab);
+
+    var res = el('div', 'resumo');
+    [['Candidatos', a.totalAtivos], ['Executaram o TPP', a.executaram],
+     ['Classificados', a.classificados.length], ['Eliminados', a.eliminados.length],
+     ['Ausentes', a.ausentes.length], ['Aguardando execução', a.aguardando.length]].forEach(function (par) {
+      var d = el('div');
+      d.appendChild(el('span', null, par[0]));
+      d.appendChild(el('strong', null, String(par[1])));
+      res.appendChild(d);
+    });
+    folha.appendChild(res);
+
+    // Bloco 1 — classificação geral
+    folha.appendChild(el('h2', null, 'Classificação geral'));
+    if (!a.classificados.length) {
+      folha.appendChild(el('p', 'vazio', 'Nenhum candidato classificado até o momento.'));
+    } else {
+      var linhas = [], classes = [];
+      a.classificados.forEach(function (r, i) {
+        var q = r.resultado || {};
+        linhas.push([i + 1, r.nome, r.matricula || '—', rotuloCategoria(r), r.tempo || '—',
+          q.pontuacaoTempo === null || q.pontuacaoTempo === undefined ? '—' : n2(q.pontuacaoTempo),
+          '-' + (q.pontosPen || 0), mfDe(q)]);
+        classes.push(i < 3 ? 'podio' : '');
+      });
+      tabela(folha, [{ t: '#', num: true }, 'Nome de guerra', { t: 'Matrícula', num: true }, 'Categoria',
+        { t: 'Tempo', num: true }, { t: 'Pts tempo', num: true }, { t: 'Penal.', num: true },
+        { t: 'MF', num: true }], linhas, classes);
+      folha.appendChild(el('p', 'nota-rodape',
+        'Ordem: maior MF. Empate resolvido por ' +
+        (CFG.CRITERIOS_DESEMPATE || []).map(function (c) { return ROTULO_CRITERIO[c] || c; }).join(' → ') + '.'));
+    }
+
+    // Bloco 2 — distribuição das vagas
+    var d = a.vagas;
+    var previstas = d.destinos.reduce(function (s, x) { return s + x.quantidade; }, 0);
+    var ocupadas = d.destinos.reduce(function (s, x) { return s + x.classificados.length; }, 0);
+    folha.appendChild(el('h2', null, 'Distribuição das vagas do curso — ' + ocupadas + ' de ' + previstas + ' preenchidas'));
+
+    tabela(folha, ['Destinação', 'Postos/Graduações', { t: 'Previstas', num: true }, { t: 'Herdadas', num: true },
+      { t: 'Preenchidas', num: true }, { t: 'Não preenchidas', num: true }],
+      d.destinos.map(function (x) {
+        return [x.nome + (x.reserva ? ' (reserva)' : ''), x.postos || '—', x.quantidade,
+          x.herdadas || '—', x.classificados.length, x.remanescentes || '—'];
+      }));
+
+    d.destinos.forEach(function (dest) {
+      var h3 = el('h3', null, dest.nome + (dest.postos && dest.postos !== '—' ? ' — ' + dest.postos : ''));
+      h3.appendChild(el('span', null, dest.classificados.length + '/' + dest.vagas + ' vaga(s)'));
+      folha.appendChild(h3);
+      if (!dest.classificados.length) {
+        folha.appendChild(el('p', 'vazio', 'Nenhum candidato classificado nesta destinação.'));
+      } else {
+        tabela(folha, [{ t: '#', num: true }, 'Nome de guerra', { t: 'Matrícula', num: true },
+          { t: 'Tempo', num: true }, { t: 'MF', num: true }],
+          dest.classificados.map(function (c, i) {
+            return [i + 1, c.nome + (c.gbmot && !dest.reserva ? ' •' : ''), c.matricula || '—',
+              c.tempo || '—', mfDe(c.resultado)];
+          }));
+      }
+      if (dest.remanescentes > 0) {
+        folha.appendChild(el('p', 'alerta', dest.remanescentes + ' vaga(s) não preenchida(s) — não há candidatos ' +
+          'classificados suficientes nesta destinação' +
+          (dest.redistribuiPara ? '' : ' e o edital não prevê redistribuição') + '. Decisão da comissão.'));
+      }
+    });
+    folha.appendChild(el('p', 'nota-rodape', '• = militar do GBMOT que entrou pela própria graduação, sem ocupar vaga reservada.'));
+    if (d.semVaga.length) {
+      folha.appendChild(el('p', 'nota-rodape', d.semVaga.length + ' candidato(s) classificado(s) sem vaga — cadastro de reserva.'));
+    }
+    if (d.semCategoria.length) {
+      folha.appendChild(el('p', 'alerta', d.semCategoria.length + ' candidato(s) sem CATEGORIA válida na planilha, ' +
+        'portanto fora da distribuição: ' + d.semCategoria.map(function (c) { return c.nome; }).join(', ') + '.'));
+    }
+
+    // Bloco 3 — infrações apuradas
+    folha.appendChild(el('h2', null, 'Infrações apuradas por candidato'));
+    var comExec = a.classificados.concat(a.eliminados).filter(function (r) { return r.tempo || (r.resultado || {}).eliminado; });
+    if (!comExec.length) {
+      folha.appendChild(el('p', 'vazio', 'Nenhuma execução registrada até o momento.'));
+    } else {
+      tabela(folha, ['Nome de guerra', { t: 'Matrícula', num: true }, 'Infrações', { t: 'Pontos', num: true }],
+        comExec.map(function (r) {
+          return [r.nome, r.matricula || '—', resumoPenalidades(r.contagens), '-' + ((r.resultado || {}).pontosPen || 0)];
+        }));
+    }
+
+    // Bloco 4 — eliminados
+    folha.appendChild(el('h2', null, 'Candidatos eliminados'));
+    if (!a.eliminados.length) {
+      folha.appendChild(el('p', 'vazio', 'Nenhum candidato eliminado.'));
+    } else {
+      tabela(folha, ['Nome de guerra', { t: 'Matrícula', num: true }, 'Categoria', { t: 'Tempo', num: true }, 'Motivo da eliminação'],
+        a.eliminados.map(function (r) {
+          return [r.nome, r.matricula || '—', rotuloCategoria(r), r.tempo || '—', (r.resultado || {}).motivo || '—'];
+        }), a.eliminados.map(function () { return 'elim'; }));
+    }
+
+    // Bloco 5 — ausentes
+    folha.appendChild(el('h2', null, 'Candidatos ausentes'));
+    if (!a.ausentes.length) {
+      folha.appendChild(el('p', 'vazio', 'Nenhum ausente — todos os agendados com horário vencido executaram o TPP.'));
+    } else {
+      tabela(folha, ['Nome de guerra', { t: 'Matrícula', num: true }, 'Categoria', { t: 'Faixa perdida', num: true }],
+        a.ausentes.map(function (r) { return [r.nome, r.matricula || '—', rotuloCategoria(r), fmtFaixaCurta(r.faixaPerdida)]; }));
+      folha.appendChild(el('p', 'nota-rodape',
+        'Agendados numa faixa cujo horário já passou, sem tempo lançado até a emissão deste relatório.'));
+    }
+
+    // Bloco 6 — aguardando
+    if (a.aguardando.length) {
+      folha.appendChild(el('h2', null, 'Candidatos que ainda não executaram o TPP'));
+      tabela(folha, ['Nome de guerra', { t: 'Matrícula', num: true }, 'Categoria', { t: 'Faixa agendada', num: true }],
+        a.aguardando.map(function (r) {
+          return [r.nome, r.matricula || '—', rotuloCategoria(r), r.faixaFutura ? fmtFaixaCurta(r.faixaFutura) : 'sem agendamento'];
+        }));
+    }
+
+    var rod = el('div', 'rodape');
+    rod.appendChild(el('p', null, 'MF = [(pontuação do tempo × 1,75) + (100 − penalidades)] ÷ 2,75 — ' +
+      (ed.numero || '') + ', item 8'));
+    rod.appendChild(el('p', null, 'Critérios de desempate: ' +
+      (CFG.CRITERIOS_DESEMPATE || []).map(function (c) { return ROTULO_CRITERIO[c] || c; }).join(' → ') + '.'));
+    rod.appendChild(el('p', null, 'Emitido em ' + new Date().toLocaleString('pt-BR') +
+      ' · Fonte: planilha Selecao_Condutores_2026 (abas CANDIDATOS, REGISTROS, RESULTADOS, Faixas, Agendamentos)'));
+    folha.appendChild(rod);
+
+    var ass = el('div', 'assinaturas');
+    ['Presidente da Comissão', 'Membro da Comissão', 'Membro da Comissão'].forEach(function (t) {
+      var b = el('div');
+      b.appendChild(el('p', null, t));
+      ass.appendChild(b);
+    });
+    folha.appendChild(ass);
+  }
+
+  /* ---------------- .docx para o SEI ---------------- */
+  function baixarDocx() {
+    if (!dados) { alert('Os dados ainda estão carregando.'); return; }
+    var ed = CFG.EDITAL || {};
+    var a = apurar();
+    var d = a.vagas;
+    var doc = AppDocx.novo();
+
+    doc.titulo('Relatório de Classificação — ' + (ed.prova || 'Teste Profissional Prático'));
+    doc.subtitulo((ed.unidade || '') + ' — ' + (ed.cursoExtenso || ed.curso || ''));
+    doc.subtitulo((ed.numero || '') + ' · Local: ' + (ed.local || '') + ' · Viatura: ' + (ed.viatura || ''));
+
+    doc.secao('Resumo geral');
+    doc.ficha([
+      ['Candidatos inscritos', String(a.totalAtivos)],
+      ['Executaram o TPP', String(a.executaram)],
+      ['Classificados', String(a.classificados.length)],
+      ['Eliminados', String(a.eliminados.length)],
+      ['Ausentes', String(a.ausentes.length)],
+      ['Aguardando execução', String(a.aguardando.length)],
+    ]);
+
+    doc.secao('Classificação geral');
+    if (!a.classificados.length) {
+      doc.paragrafo('Nenhum candidato classificado até o momento.');
+    } else {
+      var linhas = [['#', 'Nome de guerra', 'Matrícula', 'Categoria', 'Tempo', 'Pts tempo', 'Penal.', 'MF']];
+      a.classificados.forEach(function (r, i) {
+        var q = r.resultado || {};
+        linhas.push([String(i + 1), r.nome, String(r.matricula || '—'), rotuloCategoria(r), r.tempo || '—',
+          q.pontuacaoTempo === null || q.pontuacaoTempo === undefined ? '—' : n2(q.pontuacaoTempo),
+          '-' + (q.pontosPen || 0), mfDe(q)]);
+      });
+      doc.tabela(linhas, { cabecalho: true, larguras: [5, 26, 13, 15, 10, 11, 8, 12], centradas: [0, 2, 4, 5, 6, 7] });
+      doc.paragrafo('Ordem: maior MF. Empate resolvido por ' +
+        (CFG.CRITERIOS_DESEMPATE || []).map(function (c) { return ROTULO_CRITERIO[c] || c; }).join(' → ') + '.');
+    }
+
+    var previstas = d.destinos.reduce(function (s, x) { return s + x.quantidade; }, 0);
+    var ocupadas = d.destinos.reduce(function (s, x) { return s + x.classificados.length; }, 0);
+    doc.secao('Distribuição das vagas do curso — ' + ocupadas + ' de ' + previstas + ' preenchidas');
+    var quadro = [['Destinação', 'Postos/Graduações', 'Previstas', 'Herdadas', 'Preenchidas', 'Não preenchidas']];
+    d.destinos.forEach(function (x) {
+      quadro.push([x.nome + (x.reserva ? ' (reserva)' : ''), x.postos || '—', String(x.quantidade),
+        String(x.herdadas || '—'), String(x.classificados.length), String(x.remanescentes || '—')]);
+    });
+    doc.tabela(quadro, { cabecalho: true, larguras: [22, 26, 13, 13, 13, 13], centradas: [2, 3, 4, 5] });
+
+    d.destinos.forEach(function (dest) {
+      doc.secao(dest.nome + (dest.postos && dest.postos !== '—' ? ' — ' + dest.postos : '') +
+        ' (' + dest.classificados.length + '/' + dest.vagas + ')');
+      if (!dest.classificados.length) {
+        doc.paragrafo('Nenhum candidato classificado nesta destinação.');
+      } else {
+        var t = [['#', 'Nome de guerra', 'Matrícula', 'Tempo', 'MF']];
+        dest.classificados.forEach(function (c, i) {
+          t.push([String(i + 1), c.nome + (c.gbmot && !dest.reserva ? ' •' : ''), String(c.matricula || '—'),
+            c.tempo || '—', mfDe(c.resultado)]);
+        });
+        doc.tabela(t, { cabecalho: true, larguras: [7, 41, 18, 16, 18], centradas: [0, 2, 3, 4] });
+      }
+      if (dest.remanescentes > 0) {
+        doc.paragrafo(dest.remanescentes + ' vaga(s) não preenchida(s) — não há candidatos classificados ' +
+          'suficientes nesta destinação' + (dest.redistribuiPara ? '' : ' e o edital não prevê redistribuição') +
+          '. Decisão da comissão.');
+      }
+    });
+    doc.paragrafo('• = militar do GBMOT que entrou pela própria graduação, sem ocupar vaga reservada.');
+    if (d.semVaga.length) {
+      doc.paragrafo(d.semVaga.length + ' candidato(s) classificado(s) sem vaga — cadastro de reserva.');
+    }
+    if (d.semCategoria.length) {
+      doc.paragrafo(d.semCategoria.length + ' candidato(s) sem CATEGORIA válida na planilha, portanto fora da ' +
+        'distribuição: ' + d.semCategoria.map(function (c) { return c.nome; }).join(', ') + '.');
+    }
+
+    doc.secao('Infrações apuradas por candidato');
+    var comExec = a.classificados.concat(a.eliminados).filter(function (r) { return r.tempo || (r.resultado || {}).eliminado; });
+    if (!comExec.length) {
+      doc.paragrafo('Nenhuma execução registrada até o momento.');
+    } else {
+      var inf = [['Nome de guerra', 'Matrícula', 'Infrações', 'Pontos']];
+      comExec.forEach(function (r) {
+        inf.push([r.nome, String(r.matricula || '—'), resumoPenalidades(r.contagens), '-' + ((r.resultado || {}).pontosPen || 0)]);
+      });
+      doc.tabela(inf, { cabecalho: true, larguras: [22, 12, 55, 11], centradas: [1, 3] });
+    }
+
+    doc.secao('Candidatos eliminados');
+    if (!a.eliminados.length) {
+      doc.paragrafo('Nenhum candidato eliminado.');
+    } else {
+      var elim = [['Nome de guerra', 'Matrícula', 'Categoria', 'Tempo', 'Motivo da eliminação']];
+      a.eliminados.forEach(function (r) {
+        elim.push([r.nome, String(r.matricula || '—'), rotuloCategoria(r), r.tempo || '—', (r.resultado || {}).motivo || '—']);
+      });
+      doc.tabela(elim, { cabecalho: true, larguras: [22, 12, 16, 11, 39], centradas: [1, 3] });
+    }
+
+    doc.secao('Candidatos ausentes');
+    if (!a.ausentes.length) {
+      doc.paragrafo('Nenhum ausente — todos os agendados com horário vencido executaram o TPP.');
+    } else {
+      var aus = [['Nome de guerra', 'Matrícula', 'Categoria', 'Faixa perdida']];
+      a.ausentes.forEach(function (r) { aus.push([r.nome, String(r.matricula || '—'), rotuloCategoria(r), fmtFaixaCurta(r.faixaPerdida)]); });
+      doc.tabela(aus, { cabecalho: true, larguras: [32, 16, 22, 30], centradas: [1, 3] });
+      doc.paragrafo('Agendados numa faixa cujo horário já passou, sem tempo lançado até a emissão deste relatório.');
+    }
+
+    if (a.aguardando.length) {
+      doc.secao('Candidatos que ainda não executaram o TPP');
+      var ag = [['Nome de guerra', 'Matrícula', 'Categoria', 'Faixa agendada']];
+      a.aguardando.forEach(function (r) {
+        ag.push([r.nome, String(r.matricula || '—'), rotuloCategoria(r),
+          r.faixaFutura ? fmtFaixaCurta(r.faixaFutura) : 'sem agendamento']);
+      });
+      doc.tabela(ag, { cabecalho: true, larguras: [32, 16, 22, 30], centradas: [1, 3] });
+    }
+
+    doc.secao('Observações');
+    doc.paragrafo('MF = [(pontuação do tempo × 1,75) + (100 − penalidades)] ÷ 2,75 — ' + (ed.numero || '') + ', item 8.');
+    doc.paragrafo('Critérios de desempate: ' +
+      (CFG.CRITERIOS_DESEMPATE || []).map(function (c) { return ROTULO_CRITERIO[c] || c; }).join(' → ') + '.');
+    doc.paragrafo('Emitido em ' + new Date().toLocaleString('pt-BR') +
+      ' a partir da planilha Selecao_Condutores_2026.');
+
+    doc.espaco();
+    doc.espaco();
+    doc.tabela([['Presidente da Comissão', 'Membro da Comissão', 'Membro da Comissão']],
+      { larguras: [34, 33, 33], centradas: [0, 1, 2] });
+
+    AppDocx.baixar(doc, 'TPP-Relatorio-Classificacao-' + hojeISO() + '.docx');
+  }
+
+  /* ---------------- Carga ---------------- */
+  Promise.all([
+    AppUtils.baixarAba(CFG.CSV_FAIXAS_URL).catch(function () { return []; }),
+    AppUtils.baixarAba(CFG.CSV_AGENDAMENTOS_URL).catch(function () { return []; }),
+  ]).then(function (r) {
+    faixas = r[0]; agendamentos = r[1];
+    if (!faixas.length) {
+      console.warn('[CONDUTORES] Aba Faixas vazia ou ilegível — "ausentes" fica zerado.');
+    }
+    render();
+  });
+
+  AppUtils.iniciarPolling(function (d) {
+    if (!d) return;
+    dados = d;
+    render();
+  });
+})();
+</script>
+</body>
+</html>
