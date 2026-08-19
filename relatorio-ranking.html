@@ -175,24 +175,28 @@
     }
 
     var ranking = (dados.ranking || []);
-    var classificados = [], eliminados = [], ausentes = [], aguardando = [];
+    var classificados = [], eliminados = [], ausentes = [], aguardando = [], semNota = [];
 
+    /* Mesmo critério da tela de classificação: classificado é quem tem MF
+       apurada. Cada candidato cai em exatamente uma lista — a soma das
+       cinco tem de fechar com o total, e é isso que impede este relatório
+       de divergir do painel. */
     ranking.forEach(function (r) {
       var q = r.resultado || {};
       if (q.eliminado) { eliminados.push(r); return; }
-      if (r.tempo) { classificados.push(r); return; }
+      if (q.mf !== null && q.mf !== undefined) { classificados.push(r); return; }
+      if (r.tempo) { semNota.push(r); return; }
       var f = faixaPorId[agendadoDe[r.matricula] || agendadoDe[r.id]];
       if (f && vencida(f)) { r.faixaPerdida = f; ausentes.push(r); }
       else { r.faixaFutura = f || null; aguardando.push(r); }
     });
 
-    eliminados.sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
-    ausentes.sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
-    aguardando.sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
+    var porNome = function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); };
+    eliminados.sort(porNome); ausentes.sort(porNome); aguardando.sort(porNome); semNota.sort(porNome);
 
     return {
       ranking: ranking, classificados: classificados, eliminados: eliminados,
-      ausentes: ausentes, aguardando: aguardando,
+      ausentes: ausentes, aguardando: aguardando, semNota: semNota,
       vagas: AppUtils.distribuirVagas(ranking),
       totalAtivos: ranking.length,
       executaram: ranking.filter(function (r) { return !!r.tempo; }).length
@@ -235,9 +239,11 @@
     folha.appendChild(cab);
 
     var res = el('div', 'resumo');
-    [['Candidatos', a.totalAtivos], ['Executaram o TPP', a.executaram],
+    var painel = [['Candidatos', a.totalAtivos], ['Executaram o TPP', a.executaram],
      ['Classificados', a.classificados.length], ['Eliminados', a.eliminados.length],
-     ['Ausentes', a.ausentes.length], ['Aguardando execução', a.aguardando.length]].forEach(function (par) {
+     ['Ausentes', a.ausentes.length], ['Aguardando execução', a.aguardando.length]];
+    if (a.semNota.length) painel.push(['Sem MF apurada', a.semNota.length]);
+    painel.forEach(function (par) {
       var d = el('div');
       d.appendChild(el('span', null, par[0]));
       d.appendChild(el('strong', null, String(par[1])));
@@ -310,7 +316,7 @@
 
     // Bloco 3 — infrações apuradas
     folha.appendChild(el('h2', null, 'Infrações apuradas por candidato'));
-    var comExec = a.classificados.concat(a.eliminados).filter(function (r) { return r.tempo || (r.resultado || {}).eliminado; });
+    var comExec = a.classificados.concat(a.eliminados, a.semNota).filter(function (r) { return r.tempo || (r.resultado || {}).eliminado; });
     if (!comExec.length) {
       folha.appendChild(el('p', 'vazio', 'Nenhuma execução registrada até o momento.'));
     } else {
@@ -329,6 +335,18 @@
         a.eliminados.map(function (r) {
           return [r.nome, r.matricula || '—', rotuloCategoria(r), r.tempo || '—', (r.resultado || {}).motivo || '—'];
         }), a.eliminados.map(function () { return 'elim'; }));
+    }
+
+    // Bloco 4b — tem tempo lançado mas a MF não fechou (nunca some calado)
+    if (a.semNota.length) {
+      var h2sn = el('h2', null, 'Execuções sem MF apurada — verificar planilha');
+      h2sn.style.background = '#ba1a1a';
+      folha.appendChild(h2sn);
+      folha.appendChild(el('p', 'nota-rodape',
+        'Têm tempo lançado em RESULTADOS, mas a MF não pôde ser calculada — em geral o tempo está fora do ' +
+        'formato mm:ss. Não entram na classificação enquanto não forem corrigidos.'));
+      tabela(folha, ['Nome de guerra', { t: 'Matrícula', num: true }, 'Categoria', { t: 'Tempo lançado', num: true }],
+        a.semNota.map(function (r) { return [r.nome, r.matricula || '—', rotuloCategoria(r), r.tempo || '—']; }));
     }
 
     // Bloco 5 — ausentes
@@ -382,14 +400,16 @@
     doc.subtitulo((ed.numero || '') + ' · Local: ' + (ed.local || '') + ' · Viatura: ' + (ed.viatura || ''));
 
     doc.secao('Resumo geral');
-    doc.ficha([
+    var ficha = [
       ['Candidatos inscritos', String(a.totalAtivos)],
       ['Executaram o TPP', String(a.executaram)],
       ['Classificados', String(a.classificados.length)],
       ['Eliminados', String(a.eliminados.length)],
       ['Ausentes', String(a.ausentes.length)],
       ['Aguardando execução', String(a.aguardando.length)],
-    ]);
+    ];
+    if (a.semNota.length) ficha.push(['Sem MF apurada', String(a.semNota.length)]);
+    doc.ficha(ficha);
 
     doc.secao('Classificação geral');
     if (!a.classificados.length) {
@@ -446,7 +466,7 @@
     }
 
     doc.secao('Infrações apuradas por candidato');
-    var comExec = a.classificados.concat(a.eliminados).filter(function (r) { return r.tempo || (r.resultado || {}).eliminado; });
+    var comExec = a.classificados.concat(a.eliminados, a.semNota).filter(function (r) { return r.tempo || (r.resultado || {}).eliminado; });
     if (!comExec.length) {
       doc.paragrafo('Nenhuma execução registrada até o momento.');
     } else {
@@ -466,6 +486,15 @@
         elim.push([r.nome, String(r.matricula || '—'), rotuloCategoria(r), r.tempo || '—', (r.resultado || {}).motivo || '—']);
       });
       doc.tabela(elim, { cabecalho: true, larguras: [22, 12, 16, 11, 39], centradas: [1, 3] });
+    }
+
+    if (a.semNota.length) {
+      doc.secao('Execuções sem MF apurada — verificar planilha');
+      doc.paragrafo('Têm tempo lançado em RESULTADOS, mas a MF não pôde ser calculada — em geral o tempo está ' +
+        'fora do formato mm:ss. Não entram na classificação enquanto não forem corrigidos.');
+      var sn = [['Nome de guerra', 'Matrícula', 'Categoria', 'Tempo lançado']];
+      a.semNota.forEach(function (r) { sn.push([r.nome, String(r.matricula || '—'), rotuloCategoria(r), r.tempo || '—']); });
+      doc.tabela(sn, { cabecalho: true, larguras: [32, 16, 22, 30], centradas: [1, 3] });
     }
 
     doc.secao('Candidatos ausentes');

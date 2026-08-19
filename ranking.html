@@ -272,8 +272,18 @@ tailwind.config = { theme: { extend: {
 
     var medalhas = ['bg-amber-400', 'bg-zinc-300', 'bg-amber-700'];
 
+    /* Posição só existe para quem tem MF apurada. Quem ainda não executou
+       não é "último colocado", é candidato sem nota — numerá-lo criava
+       posição para quem nunca correu e ainda fazia a contagem pular
+       números (os ausentes no meio consumiam índices), divergindo do
+       relatório de classificação. Contador próprio, sequencial. */
+    var posicao = 0;
+
     rankingAtual.forEach(function (r, idx) {
       var elim = r.resultado.eliminado;
+      var classificado = !elim && !r.ausente && r.resultado.mf !== null;
+      var pos = classificado ? ++posicao : null;
+
       var tr = el('tr', 'border-b-2 border-black/10 cursor-pointer hover:bg-surface-container-highest transition-colors ' +
         (r.ausente ? 'bg-error/5' : (idx % 2 === 0 ? 'bg-white' : 'bg-surface-container-low')) +
         (selecionado === r.id ? ' outline outline-2 outline-black' : '') +
@@ -281,8 +291,8 @@ tailwind.config = { theme: { extend: {
 
       var tdPos = el('td', 'p-3 text-center');
       tdPos.appendChild(el('span', 'inline-block w-8 h-8 leading-8 font-black text-sm ' +
-        (!elim && !r.ausente && idx < 3 ? medalhas[idx] + ' text-black' : ''),
-        (elim || r.ausente) ? '—' : (idx + 1) + 'º'));
+        (pos && pos <= 3 ? medalhas[pos - 1] + ' text-black' : ''),
+        pos ? pos + 'º' : '—'));
       tr.appendChild(tdPos);
 
       tr.appendChild(el('td', 'p-3 font-black text-sm uppercase', r.nome));
