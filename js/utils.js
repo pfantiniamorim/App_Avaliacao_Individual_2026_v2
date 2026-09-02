@@ -701,7 +701,16 @@
     // Se ainda está na fila (não enviada), remove de lá
     var fila = lerFila();
     var idx = fila.findIndex(function (d) { return d.tipo === "penalidade" && d.ts === ts; });
-    if (idx >= 0) { fila.splice(idx, 1); salvarFila(fila); setStatus("REMOVIDO (fila) " + horaAgora(), "ok"); return; }
+    if (idx >= 0) {
+      fila.splice(idx, 1); salvarFila(fila);
+      /* Estar na fila não garante que ainda não subiu: esta pode ser
+         justamente a marcação que o reenvio tem no ar agora. Tirar só
+         daqui deixaria a linha na planilha contando ponto contra o
+         candidato, sem nada no aparelho para removê-la depois — então,
+         nesse caso, manda remover no servidor também (lá é no-op quando
+         o TS não existe). */
+      if (ts !== enviandoTS) { setStatus("REMOVIDO (fila) " + horaAgora(), "ok"); return; }
+    }
     setStatus("REMOVENDO…", "busy");
     try {
       await postJson({ tipo: "removerPenalidade", ts: ts });
@@ -733,27 +742,58 @@
     setStatus("CADASTRO REMOVIDO ✅ " + horaAgora(), "ok");
   }
 
+  /* Tira da fila ATUAL — relida agora, nunca de um retrato tirado antes
+     do `await`. Reler é o ponto todo: entre o começo do envio e este
+     instante o avaliador pode ter marcado outra penalidade, que também
+     está na fila. Gravar de volta o retrato antigo apagava essa marcação
+     nova, e o avaliador via "NA FILA" para algo que já tinha sumido. */
+  function tirarDaFila(ts) {
+    salvarFila(lerFila().filter(function (d) { return d.ts !== ts; }));
+  }
+
+  /* Um reenvio por vez, e qual marcação está no ar neste momento.
+     `reenviarPendentes` é disparada SEM await ao fim de cada ciclo de
+     polling (12s); com a rede de celular oscilando, o ciclo seguinte
+     começava antes de o anterior terminar e as duas execuções mandavam
+     os MESMOS itens da fila — foi assim que a planilha ganhou linhas com
+     TS idêntico repetido. */
+  var reenviando = false;
+  var enviandoTS = null;
+
   async function reenviarPendentes() {
     if (!CFG.ENDPOINT_APPS_SCRIPT) return;
-    var fila = quarentenarVencidas();
-    if (!fila.length) return;
-    var restantes = [], motivo = null;
-    for (var i = 0; i < fila.length; i++) {
-      try { await postJson(fila[i]); }
-      catch (e) { motivo = e; restantes = restantes.concat(fila.slice(i)); break; }
-    }
-    salvarFila(restantes);
-    if (fila.length && !restantes.length) {
-      setStatus("FILA ENVIADA ✅ " + horaAgora(), "ok");
-    } else if (restantes.length) {
-      // Antes só aparecia o número, e a fila podia ficar parada por horas
-      // sem ninguém saber por quê.
-      if (motivo && motivo.tipoFalha === "servidor") {
-        console.error("[CONDUTORES] Fila parada — o servidor recusa:", motivo.message);
-        setStatus("⚠ FILA PARADA (" + restantes.length + ") — SERVIDOR RECUSA: " + motivo.message, "erro");
-      } else {
-        setStatus("PENDENTES NA FILA: " + restantes.length + " (sem conexão)", "erro");
+    if (reenviando) return;
+    reenviando = true;
+    try {
+      var fila = quarentenarVencidas();
+      if (!fila.length) return;
+      var motivo = null, enviadas = 0;
+      for (var i = 0; i < fila.length; i++) {
+        enviandoTS = fila[i].ts;
+        try { await postJson(fila[i]); }
+        catch (e) { motivo = e; break; }
+        finally { enviandoTS = null; }
+        // Uma de cada vez, assim que confirma: se o navegador for fechado
+        // no meio, o que já subiu não volta a ser enviado.
+        tirarDaFila(fila[i].ts);
+        enviadas++;
       }
+      var restantes = lerFila();
+      if (enviadas && !restantes.length) {
+        setStatus("FILA ENVIADA ✅ " + horaAgora(), "ok");
+      } else if (restantes.length && motivo) {
+        // Antes só aparecia o número, e a fila podia ficar parada por horas
+        // sem ninguém saber por quê.
+        if (motivo.tipoFalha === "servidor") {
+          console.error("[CONDUTORES] Fila parada — o servidor recusa:", motivo.message);
+          setStatus("⚠ FILA PARADA (" + restantes.length + ") — SERVIDOR RECUSA: " + motivo.message, "erro");
+        } else {
+          setStatus("PENDENTES NA FILA: " + restantes.length + " (sem conexão)", "erro");
+        }
+      }
+    } finally {
+      reenviando = false;
+      enviandoTS = null;
     }
   }
 

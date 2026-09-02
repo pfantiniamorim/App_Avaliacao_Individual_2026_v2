@@ -221,6 +221,71 @@ function limparRegistrosDeTeste() {
   Logger.log('REGISTROS limpo: %s linha(s) de penalidade removida(s).', ultimaLinha - 1);
 }
 
+/* Apaga LINHAS REPETIDAS em REGISTROS — mesmo TS gravado mais de uma vez,
+   que é a mesma marcação contada várias vezes contra o candidato.
+
+   Como aconteceu: até 13/08/2026 o reenvio da fila offline era disparado
+   a cada ciclo de polling sem esperar o anterior terminar. Com a rede de
+   celular oscilando, dois ciclos mandavam os MESMOS itens, e a versão do
+   script então implantada ainda não conferia TS repetido. Caso real:
+   V. FERNANDO (1267126) ficou com 8 linhas repetidas, 52 pontos a mais de
+   penalidade — MF 14,45 em vez de 33,36.
+
+   O cliente e o servidor já não produzem isso (fila com trava de reenvio;
+   `acrescentarPenalidade` ignora TS já gravado). Esta função é só para
+   limpar o que ficou para trás.
+
+   PRIMEIRO rode com APAGAR = false: ela apenas RELATA o que encontrou, no
+   Registro de execução. Confira a lista e só então rode com APAGAR = true.
+   Mantém sempre a PRIMEIRA ocorrência de cada TS. */
+function removerLinhasDuplicadas() {
+  var APAGAR = false;
+
+  var aba = obterAba('REGISTROS');
+  var valores = aba.getDataRange().getValues();
+  var vistos = {}, repetidas = [];
+
+  for (var i = 1; i < valores.length; i++) {
+    var ts = String(valores[i][0]).trim();
+    if (!ts) continue;
+    if (vistos[ts]) {
+      repetidas.push({ linha: i + 1, ts: ts, candidato: valores[i][4], penalidade: valores[i][5] });
+    } else {
+      vistos[ts] = true;
+    }
+  }
+
+  if (!repetidas.length) {
+    Logger.log('Nenhuma linha repetida em REGISTROS. Nada a fazer.');
+    return;
+  }
+
+  var porCandidato = {};
+  repetidas.forEach(function (r) {
+    var nome = String(r.candidato || '(sem nome)');
+    porCandidato[nome] = (porCandidato[nome] || 0) + 1;
+    Logger.log('linha %s — TS %s — %s — %s', r.linha, r.ts, nome, r.penalidade);
+  });
+  Logger.log('---');
+  Object.keys(porCandidato).forEach(function (n) {
+    Logger.log('%s: %s linha(s) repetida(s)', n, porCandidato[n]);
+  });
+  Logger.log('TOTAL: %s linha(s) repetida(s).', repetidas.length);
+
+  if (!APAGAR) {
+    Logger.log('MODO RELATÓRIO — nada foi apagado. Confira a lista acima e, se estiver certa, ' +
+      'troque APAGAR para true no início desta função e execute de novo.');
+    return;
+  }
+
+  // De baixo para cima: apagar de cima muda o número das linhas seguintes.
+  for (var j = repetidas.length - 1; j >= 0; j--) {
+    aba.deleteRow(repetidas[j].linha);
+  }
+  Logger.log('%s linha(s) repetida(s) APAGADA(S). A primeira ocorrência de cada marcação foi mantida.',
+    repetidas.length);
+}
+
 /* Remove marcações de dias ANTERIORES ao da prova, preservando o dia
    corrente. Existe por causa de um caso real (11/08/2026): uma marcação
    de teste feita em 05/08 ficou 5 dias presa na fila de um aparelho —
