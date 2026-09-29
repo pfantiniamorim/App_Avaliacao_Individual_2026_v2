@@ -3,12 +3,16 @@
 > Documento de transferência. Reúne tudo que foi construído e aprendido nos dois apps da
 > seletiva, para servir de base a um app semelhante voltado ao **curso**.
 >
-> Escrito em 02/09/2026, ao fim da seletiva. Fonte: repositórios
+> Escrito em 02/09/2026, ao fim da seletiva; **atualizado em 29/09/2026**, depois de o app
+> ser reaberto para a turma do curso. Fonte: repositórios
 > `App_Avaliacao_Individual_2026_v2` e `painel-de-agendamento`, mais a planilha
 > `Selecao_Condutores_2026` lida ao vivo.
 >
 > **A fórmula da nota NÃO se aproveita** — o curso terá outra formação. Tudo o mais
-> (arquitetura, modelo de dados, telas, armadilhas) se aproveita inteiro.
+> (arquitetura, modelo de dados, telas, armadilhas, operação) se aproveita inteiro.
+>
+> **Para começar o app do curso, leia nesta ordem:** §8 (armadilhas — o que não repetir),
+> §11 (como operar um ciclo) e §13 (o que decidir antes da primeira linha de código).
 
 ---
 
@@ -223,6 +227,27 @@ Duas sutilezas que custaram tempo e devem ser preservadas:
 | `apps_script/Code.gs` — `doPost` | Roteador por `tipo`, `LockService`, idempotência por TS | Sim |
 | `js/config.js` | Padrão "tudo configurável num arquivo" | **Sim, o padrão.** Os valores, não |
 | `FormularioAvaliacao.gs` | Gera o Forms de avaliação do processo | Sim, trocando as perguntas |
+| `Code.gs` — funções de manutenção | Ciclo de vida da planilha (§11) | **Sim, inteiro.** É o que faltava na seletiva |
+
+### Funções de manutenção do `Code.gs`
+
+Não ficam expostas no `doPost`: rodam à mão pelo editor do Apps Script. Foram surgindo
+conforme a operação exigiu, e hoje são o que permite reusar a mesma planilha em vários
+ciclos sem perder histórico.
+
+| Função | O que faz |
+|---|---|
+| `arquivarEZerarAvaliacoes()` | Copia `REGISTROS` e `RESULTADOS` para abas de arquivo, **confere célula a célula** e só então zera as originais. Falhou a conferência, nada é apagado |
+| `listarCiclosArquivados()` | Lista os ciclos já guardados na planilha |
+| `manterApenasATurma()` | Deixa ativos só os militares de uma relação; os demais viram `ATIVO = NÃO`. Ninguém é apagado |
+| `reativarTodosOsCandidatos()` | Desfaz a filtragem acima |
+| `removerLinhasDuplicadas()` | Apaga linhas com o mesmo `TS` em `REGISTROS`, com modo relatório antes de apagar |
+| `limparMarcacoesDeOutrosDias()` | Remove marcações de dias anteriores, preservando o dia corrente |
+| `limparRegistrosDeTeste()` | Zera `REGISTROS` por completo (sem arquivar — preferir `arquivarEZerarAvaliacoes`) |
+
+**O padrão que emergiu e deve ser repetido:** operação destrutiva faz **arquivar → conferir
+→ apagar**, nessa ordem, e aborta sem apagar se a conferência falhar. Operação de grande
+alcance tem modo relatório antes do modo que altera.
 
 ---
 
@@ -291,7 +316,24 @@ quando a implantação foi corrigida.
 planilha), fecharam a agenda na hora errada. **Regra:** perguntar o fuso à planilha
 (`ss.getSpreadsheetTimeZone()`), nunca fixar.
 
-### 8.11 Sem autenticação real
+### 8.11 Remover marcação que já está subindo
+Se o avaliador tocasse em "Remover" enquanto aquela marcação estava em trânsito, ela saía só
+da fila local — e a linha ficava na planilha contando ponto contra o candidato, sem nada no
+aparelho para removê-la depois.
+**Regra:** quando o item removido é o que está no ar, mandar a remoção também ao servidor. Lá
+é no-op se a linha não existir.
+
+### 8.12 Repositório privado derruba o GitHub Pages
+No plano gratuito, Pages só funciona em repositório **público**. Ao tornar o repositório
+privado, o site é despublicado — e a queda passa despercebida até alguém tentar abrir.
+**Pior:** religar o Pages **não republica sozinho**. O repositório fica com
+`has_pages: true`, o que dá falsa segurança, mas nada é servido até que um **push novo**
+dispare o build. O site ficou 4 semanas fora por isso.
+**Regra:** depois de mexer em visibilidade ou em configuração do Pages, faça um push (um
+commit vazio serve) e confira em `/actions/runs` se o `pages build and deployment` rodou.
+Alternativa sem essa armadilha: Netlify, que serve repositório privado no plano gratuito.
+
+### 8.13 Sem autenticação real
 O PIN do chefe está no código-fonte e o painel da comissão se protege por uma URL com
 sufixo aleatório. Em app estático gratuito **não há** como esconder segredo — F12 mostra
 tudo. Foi aceito conscientemente. Se o app do curso lidar com dado mais sensível, isso
@@ -414,7 +456,102 @@ PARENTE, PEDRO, TIAGO CAMPOS.
 
 ---
 
-## 11. Onde está cada coisa
+## 11. Operação de um ciclo de avaliação
+
+Isto **não existia** na seletiva e foi construído na marra quando o app precisou ser reaberto
+para o curso. É a peça que faltava: a mesma planilha e o mesmo app servem a vários ciclos,
+desde que o ciclo anterior seja arquivado antes.
+
+### A sequência
+
+```
+1. ARQUIVAR o ciclo anterior     arquivarEZerarAvaliacoes()
+2. DEFINIR quem participa         manterApenasATurma()
+3. AJUSTAR as regras              js/config.js  (infrações, fórmula, desempates)
+4. AVALIAR                        avaliacao.html, em campo
+5. RELATAR                        relatorio-dia.html / relatorio-ranking.html → .docx
+6. volta ao 1 no ciclo seguinte
+```
+
+### Passo 1 — Arquivar
+
+`arquivarEZerarAvaliacoes()` copia `REGISTROS` e `RESULTADOS` para abas com rótulo do ciclo
+(`REGISTROS_SELETIVA_2026-08`), confere célula a célula e só então zera as originais.
+Recusa rótulo já usado, para não sobrescrever arquivo anterior. `CANDIDATOS` não é tocada.
+
+> **Por que arquivar e não apagar:** os dados da seletiva sustentam o relatório da comissão.
+> Apagar sem cópia destruiria a prova de um processo seletivo já homologado.
+
+### Passo 2 — Definir a turma
+
+`manterApenasATurma()` marca `ATIVO = NÃO` em quem não está na relação. O app esconde
+inativos em todas as telas, e o histórico de quem saiu permanece na planilha.
+`reativarTodosOsCandidatos()` desfaz.
+
+### Passo 3 — Ajustar as regras
+
+Tudo em `js/config.js`: `TABELA_PENALIDADES` (os botões da tela de campo saem daqui),
+`FORMULA_NOTA`, `TABELA_TEMPO`, `CRITERIOS_DESEMPATE`, `VAGAS`, `EDITAL`.
+
+> **Armadilha de ciclo:** zerar as avaliações **não** troca as regras. Se o ciclo novo tiver
+> outras infrações e outra fórmula e ninguém editar o `config.js`, a avaliação sai com os
+> botões e a nota do ciclo anterior — e ninguém percebe, porque o app funciona normalmente.
+
+### Passo 4 — Avaliar
+
+Distribuir o guia do avaliador (§12). Conferir antes do primeiro candidato: o app lista a
+turma certa, os botões são as infrações certas, e o indicador de status fica verde ao marcar.
+
+### Passo 5 — Relatar
+
+`relatorio-dia.html` ao fim de cada dia; `relatorio-ranking.html` ao fim do ciclo. Os dois
+exportam `.docx` para o SEI.
+
+---
+
+## 12. Entregáveis já produzidos
+
+Modelos prontos, para adaptar em vez de refazer do zero:
+
+| Documento | Conteúdo | Onde |
+|---|---|---|
+| Relatório final da comissão | 7 seções + anexo: metodologia, execução dia a dia, resultados, intercorrências, assinaturas | Gerado com `python-docx` |
+| Relatório dos selecionados | Relação com nome completo, lotação, tempo e memória de cálculo | Gerado com `python-docx` |
+| Guia rápido do avaliador | 7 passos ilustrados, leitura do indicador de status, o que fazer sem rede | Gerado com `python-docx` |
+| Relatórios do app | Individual, do dia e de classificação | `relatorio*.html`, `.docx` via `js/docx.js` |
+| Formulário de avaliação do processo | 31 perguntas, anônimo, respostas em planilha própria | `apps_script/FormularioAvaliacao.gs` |
+
+Dois geradores de `.docx` convivem, por motivos diferentes: **`js/docx.js`** roda no
+navegador, sem biblioteca, e serve os relatórios que a comissão emite sozinha pelo app;
+**`python-docx`** serve as peças que exigem layout mais elaborado e são montadas fora do app.
+
+---
+
+## 13. O que decidir antes da primeira linha de código do app do curso
+
+A seletiva era um evento único, com uma prova e uma nota. Um curso é outra coisa, e estas
+quatro decisões mudam o modelo de dados — mudar depois custa caro:
+
+1. **Qual a formação da nota?** Variáveis, pesos, o que é eliminatório, critérios de
+   desempate. É o único bloco que não se aproveita.
+2. **Há mais de uma avaliação por aluno?** A seletiva tinha uma execução por candidato, e o
+   modelo assume isso: `RESULTADOS` tem **uma linha por candidato**. Um curso com várias
+   atividades avaliadas precisa de `ATIVIDADE` como coluna — ou seja, uma linha por
+   *aluno × atividade*, não por aluno. **Esta é a decisão mais estrutural das quatro.**
+3. **Há frequência ou presença a controlar?** Não existia na seletiva. Se existir, é uma aba
+   nova e uma tela nova.
+4. **O aluno vê a própria nota, e quando?** Define se o relatório individual ganha link
+   próprio por aluno e o que ele pode exibir (§4 — o relatório individual não mostra posição).
+
+E uma decisão de infraestrutura: **a mesma planilha ou uma nova?** Reusar mantém o cadastro e
+o histórico juntos, ao custo de a planilha crescer a cada ciclo. Separar deixa cada curso
+isolado, ao custo de recadastrar os alunos. Para um curso de 25 alunos com várias atividades,
+recomendo **planilha nova**, com `CANDIDATOS` copiada — o modelo de `RESULTADOS` vai mudar
+(item 2) e conviver com o formato antigo na mesma aba só gera confusão.
+
+---
+
+## 14. Onde está cada coisa
 
 ```
 App_Avaliacao_Individual_2026_v2/
@@ -424,9 +561,10 @@ App_Avaliacao_Individual_2026_v2/
 ├── js/config.js      ← TODAS as regras do edital
 ├── js/utils.js       ← núcleo: polling, fila offline, cálculo, ranking, vagas
 ├── js/docx.js        ← gerador .docx sem dependência (reaproveitável)
-├── apps_script/Code.gs                  ← backend vinculado à planilha
+├── apps_script/Code.gs                  ← backend vinculado à planilha + manutenção (§7)
 ├── apps_script/FormularioAvaliacao.gs   ← gerador do Forms de avaliação
 ├── PROXIMOS_PASSOS.md · CONFIGURAR_PLANILHA.md · README.md
+├── CONSOLIDACAO-PARA-APP-DO-CURSO.md    ← este documento
 
 painel-de-agendamento/
 ├── frontend/  (fonte)  ·  docs/  (o que o Netlify serve — manter idênticos)
