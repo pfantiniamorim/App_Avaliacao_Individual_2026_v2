@@ -286,6 +286,113 @@ function removerLinhasDuplicadas() {
     repetidas.length);
 }
 
+/* ========== ARQUIVAR AS AVALIAÇÕES E COMEÇAR UM CICLO NOVO ==========
+   Guarda o que já foi avaliado em abas de arquivo e deixa REGISTROS e
+   RESULTADOS vazias, para uma nova rodada de avaliação começar do zero.
+
+   A ordem importa e é o que torna a operação segura:
+     1. copia REGISTROS e RESULTADOS para abas novas;
+     2. CONFERE célula a célula que a cópia ficou idêntica;
+     3. só então apaga o conteúdo das abas originais.
+   Se a conferência falhar em qualquer ponto, a função para e NADA é
+   apagado — as cópias ficam na planilha para você conferir à mão.
+
+   ANTES DE EXECUTAR: troque ROTULO pelo nome do ciclo que está sendo
+   encerrado. Ele vira o nome das abas de arquivo e não pode repetir —
+   se já existir aba com esse nome, a função recusa, em vez de
+   sobrescrever um arquivo anterior.
+
+   Uso: no editor do Apps Script, escolher `arquivarEZerarAvaliacoes` no
+   seletor ao lado de "Executar" e clicar em Executar. O relatório sai no
+   Registro de execução (Ver → Registros).
+
+   Os candidatos (aba CANDIDATOS) NÃO são tocados. */
+function arquivarEZerarAvaliacoes() {
+  var ROTULO = 'SELETIVA_2026-08';
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ABAS_CICLO = ['REGISTROS', 'RESULTADOS'];
+  var plano = [];
+
+  // ---- 1. Levantamento e checagens, antes de mexer em qualquer coisa ----
+  ABAS_CICLO.forEach(function (nome) {
+    var origem = obterAba(nome);
+    var dados = origem.getDataRange().getValues();
+    var destino = nome + '_' + ROTULO;
+    if (ss.getSheetByName(destino)) {
+      throw new Error('A aba "' + destino + '" já existe. Troque o ROTULO no início da ' +
+        'função para um nome novo — assim nenhum arquivo anterior é sobrescrito.');
+    }
+    plano.push({ nome: nome, origem: origem, dados: dados, destino: destino,
+                 linhas: Math.max(0, dados.length - 1) });
+  });
+
+  var totalLinhas = plano.reduce(function (s, x) { return s + x.linhas; }, 0);
+  if (totalLinhas === 0) {
+    Logger.log('REGISTROS e RESULTADOS já estão vazias. Nada a arquivar.');
+    return 'Nada a arquivar.';
+  }
+
+  // ---- 2. Cópia ----
+  plano.forEach(function (x) {
+    if (!x.linhas) { x.copia = null; return; }
+    var copia = ss.insertSheet(x.destino);
+    copia.getRange(1, 1, x.dados.length, x.dados[0].length).setValues(x.dados);
+    x.copia = copia;
+  });
+  SpreadsheetApp.flush();
+
+  // ---- 3. Conferência célula a célula ----
+  plano.forEach(function (x) {
+    if (!x.copia) return;
+    var conf = x.copia.getDataRange().getValues();
+    if (conf.length !== x.dados.length) {
+      throw new Error('Conferência falhou em "' + x.destino + '": a cópia tem ' + conf.length +
+        ' linha(s) e a original tem ' + x.dados.length + '. NADA foi apagado.');
+    }
+    for (var i = 0; i < x.dados.length; i++) {
+      for (var j = 0; j < x.dados[i].length; j++) {
+        if (String(conf[i][j]) !== String(x.dados[i][j])) {
+          throw new Error('Conferência falhou em "' + x.destino + '", linha ' + (i + 1) +
+            ', coluna ' + (j + 1) + '. NADA foi apagado.');
+        }
+      }
+    }
+    x.conferida = true;
+  });
+
+  // ---- 4. Limpeza (só chega aqui se TUDO conferiu) ----
+  plano.forEach(function (x) {
+    if (x.linhas && x.conferida) x.origem.deleteRows(2, x.linhas);
+  });
+
+  Logger.log('===== CICLO ARQUIVADO: %s =====', ROTULO);
+  plano.forEach(function (x) {
+    Logger.log('%s -> %s : %s linha(s) arquivada(s) e conferida(s); original zerada.',
+      x.nome, x.destino, x.linhas);
+  });
+  Logger.log('');
+  Logger.log('A aba CANDIDATOS não foi alterada.');
+  Logger.log('O app começa zerado no próximo ciclo de sincronização (cerca de 12 segundos).');
+  return 'Arquivado em "' + ROTULO + '": ' + totalLinhas + ' linha(s). Abas de avaliação zeradas.';
+}
+
+/* Lista os ciclos já arquivados nesta planilha. Útil para conferir antes
+   de arquivar de novo e para lembrar qual ROTULO já foi usado. */
+function listarCiclosArquivados() {
+  var abas = SpreadsheetApp.getActiveSpreadsheet().getSheets();
+  var achou = 0;
+  Logger.log('===== CICLOS ARQUIVADOS =====');
+  abas.forEach(function (a) {
+    var n = a.getName();
+    if (n.indexOf('REGISTROS_') === 0 || n.indexOf('RESULTADOS_') === 0) {
+      Logger.log('%s : %s linha(s) de dados', n, Math.max(0, a.getLastRow() - 1));
+      achou++;
+    }
+  });
+  if (!achou) Logger.log('Nenhum ciclo arquivado ainda.');
+}
+
 /* ================= TURMA DO 3º CECEM/2026 =================
    Deixa ATIVOS na aba CANDIDATOS apenas os militares da relação abaixo, e
    marca todos os demais como ATIVO = NÃO. Ninguém é apagado: quem sai da
