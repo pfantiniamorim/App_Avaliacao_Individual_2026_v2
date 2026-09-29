@@ -286,6 +286,121 @@ function removerLinhasDuplicadas() {
     repetidas.length);
 }
 
+/* ================= TURMA DO 3º CECEM/2026 =================
+   Deixa ATIVOS na aba CANDIDATOS apenas os militares da relação abaixo, e
+   marca todos os demais como ATIVO = NÃO. Ninguém é apagado: quem sai da
+   lista continua na planilha, inativo, com todo o histórico preservado —
+   para trazer de volta basta escrever SIM na coluna ATIVO.
+
+   O app esconde automaticamente quem está com ATIVO = NÃO em todas as
+   telas (avaliação, classificação, relatórios).
+
+   Uso: no editor do Apps Script, escolher `manterApenasATurma` no seletor
+   ao lado de "Executar" e clicar em Executar. O que foi alterado sai no
+   Registro de execução (Ver → Registros). */
+var TURMA = [
+  ['1179588', 'ALESSANDRO BORGES FERREIRA'],
+  ['1102809', 'THIAGO PEIXOTO DE FRANÇA LIMA'],
+  ['1415943', 'ORLANDO BASILIO DA SILVA JUNIOR'],
+  ['1920175', 'WILTON SANTOS PRADO DOS REIS SILVA'],
+  ['1038525', 'LUCAS MOURA FREITAS BARBOSA'],
+  ['1002481', 'LEANDRO HENRIQUE SILVEIRA'],
+  ['1054557', 'RAMADÃ LOPES DE SANTANA'],
+  ['1054670', 'JENNIFER MEDEIROS DE PAULA'],
+  ['1924819', 'RAPHAEL DAS DORES LOPES'],
+  ['1142893', 'LUIS FERNANDO LIMA ARAUJO'],
+  ['1185981', 'RUAN YORDAN RODRIGUES DE ASSIS DE LIMA'],
+  ['1142544', 'JUNIO DE JESUS LEMES'],
+  ['1215776', 'RICARDO FERREIRA DE FARIAS SOUZA'],
+  ['1266840', 'HEBER SANTOS DE JESUS'],
+  ['1265983', 'BRUNO VITOR VIEIRA MARTINS'],
+  ['1142612', 'MATHEUS BARRETO DE SENA SAMPAIO'],
+  ['1889609', 'MURILO VIEIRA SOUTO'],
+  ['1298610', 'MICHEL VASCONCELOS DOS SANTOS'],
+  ['1298199', 'RENATO LOPES DE OLIVEIRA'],
+  ['1720187', 'ELVIS MAXIMO DA SILVA'],
+  ['1299056', 'RAFAEL EVANGELISTA SOUSA'],
+  ['1299196', 'GILSON ALVES DA SILVA JUNIOR'],
+  ['1299509', 'FRANCISCO DE ARAÚJO CARVALHO JÚNIOR'],
+  ['1298178', 'ROBSON BARBOSA LEITE'],
+  ['1298231', 'JACKSON RIBEIRO VITOR']
+];
+
+function manterApenasATurma() {
+  var aba = obterAba('CANDIDATOS');
+  var valores = aba.getDataRange().getValues();
+
+  var daTurma = {};
+  TURMA.forEach(function (m) { daTurma[String(m[0]).trim()] = m[1]; });
+
+  var ativados = [], desativados = [], jaCertos = 0;
+  var encontrados = {};
+
+  for (var i = 1; i < valores.length; i++) {
+    var matricula = String(valores[i][2]).trim();
+    if (!matricula) continue;
+    var nome = String(valores[i][1]).trim();
+    var atual = String(valores[i][3]).trim().toUpperCase().replace(/Ã/g, 'A');
+    var estaAtivo = (atual !== 'NAO' && atual !== 'N' && atual !== 'FALSO' && atual !== '0');
+    var deveFicar = !!daTurma[matricula];
+    if (deveFicar) encontrados[matricula] = true;
+
+    if (deveFicar && !estaAtivo) {
+      aba.getRange(i + 1, 4).setValue('SIM');
+      ativados.push(nome + ' (' + matricula + ')');
+    } else if (!deveFicar && estaAtivo) {
+      aba.getRange(i + 1, 4).setValue('NÃO');
+      desativados.push(nome + ' (' + matricula + ')');
+    } else {
+      jaCertos++;
+    }
+  }
+
+  // Matrícula da relação que não existe no cadastro: avisa em vez de
+  // seguir em silêncio — militar sem linha não aparece no app.
+  var ausentes = [];
+  Object.keys(daTurma).forEach(function (m) {
+    if (!encontrados[m]) ausentes.push(daTurma[m] + ' (' + m + ')');
+  });
+
+  Logger.log('===== TURMA DO 3º CECEM/2026 =====');
+  Logger.log('Relação informada: %s militares', TURMA.length);
+  Logger.log('Já estavam corretos: %s', jaCertos);
+  Logger.log('');
+  Logger.log('ATIVADOS (%s):', ativados.length);
+  ativados.forEach(function (n) { Logger.log('   + ' + n); });
+  Logger.log('');
+  Logger.log('DESATIVADOS (%s) — continuam na planilha, apenas ocultos no app:', desativados.length);
+  desativados.forEach(function (n) { Logger.log('   - ' + n); });
+
+  if (ausentes.length) {
+    Logger.log('');
+    Logger.log('*** ATENÇÃO — %s da relação NÃO têm cadastro em CANDIDATOS ***', ausentes.length);
+    ausentes.forEach(function (n) { Logger.log('   ! ' + n); });
+    Logger.log('Cadastre-os em participantes.html, senão não aparecem no app.');
+  }
+
+  var ativosAgora = TURMA.length - ausentes.length;
+  Logger.log('');
+  Logger.log('RESULTADO: %s militares ativos no app.', ativosAgora);
+  return 'Turma aplicada: ' + ativosAgora + ' ativos, ' + desativados.length + ' desativados.';
+}
+
+/* Desfaz a filtragem: devolve TODOS os candidatos ao app. */
+function reativarTodosOsCandidatos() {
+  var aba = obterAba('CANDIDATOS');
+  var valores = aba.getDataRange().getValues();
+  var n = 0;
+  for (var i = 1; i < valores.length; i++) {
+    if (!String(valores[i][2]).trim()) continue;
+    if (String(valores[i][3]).trim().toUpperCase().replace(/Ã/g, 'A') !== 'SIM') {
+      aba.getRange(i + 1, 4).setValue('SIM');
+      n++;
+    }
+  }
+  Logger.log('%s candidato(s) reativado(s). Todos voltaram a aparecer no app.', n);
+}
+
 /* Remove marcações de dias ANTERIORES ao da prova, preservando o dia
    corrente. Existe por causa de um caso real (11/08/2026): uma marcação
    de teste feita em 05/08 ficou 5 dias presa na fila de um aparelho —
