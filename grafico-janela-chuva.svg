@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="700" viewBox="0 0 1040 700" font-family="system-ui,-apple-system,Segoe UI,sans-serif">
+<rect width="1040" height="700" fill="#fcfcfb"/>
+<text x="124" y="34" font-size="19" font-weight="700" fill="#0b0b0b">A janela de 2:20 a 3:20 contra os tempos da turma, com e sem chuva</text>
+<text x="124" y="56" font-size="12.5" fill="#52514e">25 alunos do 3&#186; CECEM/2026 &#183; nota da etapa = 240 &#8722; tempo total em segundos &#183; toque +1 s &#183; derrubada +3 s</text>
+<text x="124" y="74" font-size="12.5" fill="#898781">Os cen&#225;rios de chuva s&#227;o acr&#233;scimos uniformes aplicados aos tempos de tempo seco &#8212; n&#227;o h&#225; medi&#231;&#227;o em pista molhada ainda.</text>
+<rect x="198.7" y="140" width="560.0" height="380" fill="rgba(11,11,11,0.035)"/>
+<line x1="198.7" y1="140" x2="198.7" y2="520" stroke="#52514e" stroke-width="1.5"/>
+<text x="198.7" y="126" font-size="12" font-weight="700" fill="#52514e" text-anchor="middle">2:20</text>
+<line x1="758.7" y1="140" x2="758.7" y2="520" stroke="#52514e" stroke-width="1.5"/>
+<text x="758.7" y="126" font-size="12" font-weight="700" fill="#52514e" text-anchor="middle">3:20</text>
+<text x="478.7" y="126" font-size="11" fill="#898781" text-anchor="middle">janela publicada</text>
+<text x="124" y="106" font-size="13" font-weight="700" fill="#0b0b0b">NOTA DA ETAPA</text>
+<line x1="124" y1="140.0" x2="852" y2="140.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="114" y="144.0" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">100</text>
+<line x1="124" y1="253.1" x2="852" y2="253.1" stroke="#e1e0d9" stroke-width="1"/>
+<text x="114" y="257.1" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">40</text>
+<line x1="124.0" y1="140.0" x2="198.7" y2="140.0" stroke="#52514e" stroke-width="3.5" stroke-linecap="round"/>
+<line x1="198.7" y1="140.0" x2="852.0" y2="272.0" stroke="#52514e" stroke-width="2"/>
+<line x1="124" y1="196.6" x2="478.7" y2="196.6" stroke="#d03b3b" stroke-width="1.5" stroke-dasharray="5 4"/>
+<line x1="478.7" y1="196.6" x2="478.7" y2="520" stroke="#d03b3b" stroke-width="1.5" stroke-dasharray="5 4"/>
+<circle cx="478.7" cy="196.6" r="4" fill="#d03b3b" stroke="#fcfcfb" stroke-width="2"/>
+<text x="490.7" y="182" font-size="11.5" font-weight="700" fill="#d03b3b">nota 70 &#8658; tempo total 2:50</text>
+<text x="490.7" y="197" font-size="10" fill="#898781">corte hipot&#233;tico &#8212; a m&#237;nima ainda n&#227;o foi definida</text>
+<text x="124" y="308" font-size="13" font-weight="700" fill="#0b0b0b">CADA PONTO &#201; UM ALUNO &#8212; TEMPO TOTAL (EXECU&#199;&#195;O + SEGUNDOS DE PENALIDADE) EM CADA CEN&#193;RIO</text>
+<text x="100" y="362" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="end">SECO</text>
+<circle cx="112" cy="358" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<text x="100" y="376" font-size="10" fill="#898781" text-anchor="end">mediana 2:32</text>
+<circle cx="170.7" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="226.7" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="264.0" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="273.3" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="282.7" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="282.7" cy="359.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="282.7" cy="350.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="292.0" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="292.0" cy="359.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="301.3" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="301.3" cy="359.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="310.7" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="310.7" cy="359.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="348.0" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="357.3" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="366.7" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="376.0" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="385.3" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="385.3" cy="359.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="450.7" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="460.0" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="460.0" cy="359.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="478.7" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="544.0" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="665.3" cy="368.0" r="4.0" fill="#6da7ec" stroke="#fcfcfb" stroke-width="2"/>
+<text x="868" y="362" font-size="11" fill="#898781"><tspan font-size="12.5" font-weight="700" fill="#0b0b0b">24/25</tspan> na janela</text>
+<text x="868" y="378" font-size="11" fill="#898781"><tspan font-size="12.5" font-weight="700" fill="#d03b3b">23/25</tspan> com nota &#8805; 70</text>
+<text x="100" y="424" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="end">CHUVA +10 s</text>
+<circle cx="112" cy="420" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="100" y="438" font-size="10" fill="#898781" text-anchor="end">mediana 2:42</text>
+<circle cx="264.0" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="320.0" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="357.3" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="366.7" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="376.0" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="376.0" cy="421.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="376.0" cy="412.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="385.3" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="385.3" cy="421.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="394.7" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="394.7" cy="421.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="404.0" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="404.0" cy="421.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="441.3" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="450.7" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="460.0" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="469.3" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="478.7" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="478.7" cy="421.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="544.0" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="553.3" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="553.3" cy="421.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="572.0" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="637.3" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="758.7" cy="430.0" r="4.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="868" y="424" font-size="11" fill="#898781"><tspan font-size="12.5" font-weight="700" fill="#0b0b0b">25/25</tspan> na janela</text>
+<text x="868" y="440" font-size="11" fill="#898781"><tspan font-size="12.5" font-weight="700" fill="#d03b3b">19/25</tspan> com nota &#8805; 70</text>
+<text x="100" y="486" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="end">CHUVA +15 s</text>
+<circle cx="112" cy="482" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<text x="100" y="500" font-size="10" fill="#898781" text-anchor="end">mediana 2:47</text>
+<circle cx="310.7" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="366.7" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="404.0" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="413.3" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="422.7" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="422.7" cy="483.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="422.7" cy="474.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="432.0" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="432.0" cy="483.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="441.3" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="441.3" cy="483.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="450.7" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="450.7" cy="483.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="488.0" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="497.3" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="506.7" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="516.0" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="525.3" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="525.3" cy="483.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="590.7" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="600.0" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="600.0" cy="483.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="618.7" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="684.0" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="805.3" cy="492.0" r="4.0" fill="#104281" stroke="#fcfcfb" stroke-width="2"/>
+<text x="868" y="486" font-size="11" fill="#898781"><tspan font-size="12.5" font-weight="700" fill="#0b0b0b">24/25</tspan> na janela</text>
+<text x="868" y="502" font-size="11" fill="#898781"><tspan font-size="12.5" font-weight="700" fill="#d03b3b">13/25</tspan> com nota &#8805; 70</text>
+<line x1="124" y1="520" x2="852" y2="520" stroke="#c3c2b7" stroke-width="1.5"/>
+<line x1="152.0" y1="520" x2="152.0" y2="528" stroke="#c3c2b7" stroke-width="1"/>
+<text x="152.0" y="546" font-size="12" fill="#52514e" text-anchor="middle" font-variant-numeric="tabular-nums">2:15</text>
+<line x1="198.7" y1="520" x2="198.7" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="245.3" y1="520" x2="245.3" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="292.0" y1="520" x2="292.0" y2="528" stroke="#c3c2b7" stroke-width="1"/>
+<text x="292.0" y="546" font-size="12" fill="#52514e" text-anchor="middle" font-variant-numeric="tabular-nums">2:30</text>
+<line x1="338.7" y1="520" x2="338.7" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="385.3" y1="520" x2="385.3" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="432.0" y1="520" x2="432.0" y2="528" stroke="#c3c2b7" stroke-width="1"/>
+<text x="432.0" y="546" font-size="12" fill="#52514e" text-anchor="middle" font-variant-numeric="tabular-nums">2:45</text>
+<line x1="478.7" y1="520" x2="478.7" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="525.3" y1="520" x2="525.3" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="572.0" y1="520" x2="572.0" y2="528" stroke="#c3c2b7" stroke-width="1"/>
+<text x="572.0" y="546" font-size="12" fill="#52514e" text-anchor="middle" font-variant-numeric="tabular-nums">3:00</text>
+<line x1="618.7" y1="520" x2="618.7" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="665.3" y1="520" x2="665.3" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="712.0" y1="520" x2="712.0" y2="528" stroke="#c3c2b7" stroke-width="1"/>
+<text x="712.0" y="546" font-size="12" fill="#52514e" text-anchor="middle" font-variant-numeric="tabular-nums">3:15</text>
+<line x1="758.7" y1="520" x2="758.7" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="805.3" y1="520" x2="805.3" y2="524" stroke="#c3c2b7" stroke-width="1"/>
+<line x1="852.0" y1="520" x2="852.0" y2="528" stroke="#c3c2b7" stroke-width="1"/>
+<text x="852.0" y="546" font-size="12" fill="#52514e" text-anchor="middle" font-variant-numeric="tabular-nums">3:30</text>
+<text x="124" y="574" font-size="12" fill="#0b0b0b"><tspan font-weight="700">A janela absorve a chuva.</tspan> Em tempo seco, 24 de 25 caem dentro dela &#8212; s&#243; RAFAEL (2:17) fica no plat&#244; de 100. Com +10 s s&#227;o 25 de 25.</text>
+<text x="124" y="592" font-size="12" fill="#0b0b0b">Com +15 s, 1 aluno passa de 3:20 e tira 35 &#8212; n&#227;o zera, porque a reta segue sem degrau at&#233; 4:00 = 0.</text>
+<text x="124" y="616" font-size="12" fill="#0b0b0b"><tspan font-weight="700" fill="#d03b3b">O que a janela n&#227;o resolve &#233; o n&#237;vel.</tspan> Num corte hipot&#233;tico de 70, a aprova&#231;&#227;o vai de 23 para 19 e depois 13 dos 25.</text>
+<text x="124" y="634" font-size="12" fill="#0b0b0b">A chuva mexe no n&#237;vel, n&#227;o na ordem: se a turma inteira executa a etapa na mesma condi&#231;&#227;o, a classifica&#231;&#227;o n&#227;o muda.</text>
+<text x="124" y="660" font-size="10.5" fill="#898781">Tempos do TPP da seletiva (tempo seco, percurso diferente do curso) &#8212; &#250;nica distribui&#231;&#227;o real dispon&#237;vel.</text>
+<text x="124" y="676" font-size="10.5" fill="#898781">Tabela completa, segundo a segundo, em TABELA-NOTAS-CURSO-2-20-A-3-20.csv</text>
+</svg>
